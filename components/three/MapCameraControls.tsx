@@ -18,7 +18,7 @@ interface Anim {
 }
 
 /** The room, the house and the whole suburb around it. */
-const WORLD_BOUNDS = { x: [-19000, 18000], z: [-4000, 36000] } as const;
+const WORLD_BOUNDS = { x: [-78000, 78000], z: [-16000, 76000] } as const;
 
 /**
  * Google-Maps style controls: drag to pan, right-drag / two fingers to rotate and tilt, wheel to zoom.

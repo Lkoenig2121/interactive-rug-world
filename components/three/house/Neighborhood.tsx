@@ -57,7 +57,8 @@ function useHouses() {
       for (const facing of [1, -1] as const) {
         const zFront = facing === 1 ? zs - FRONT_SETBACK : zs + FRONT_SETBACK - 20;
         for (let k = -LOTS_EACH_SIDE; k <= LOTS_EACH_SIDE; k++) {
-          if (n === 0 && facing === 1 && k === 0) continue;
+          // Andy's lot, and Sid's next door (drawn by the town).
+          if (n === 0 && facing === 1 && (k === 0 || k === 1)) continue;
           out.push({
             x: LOT.centerX + k * LOT.width + (rand() - 0.5) * 120,
             zFront,
@@ -287,7 +288,7 @@ function Trees() {
       const zs = STREET_CENTER0 + n * STREET_SPACING;
       for (let k = -LOTS_EACH_SIDE; k <= LOTS_EACH_SIDE; k++) {
         const x = LOT.centerX + k * LOT.width;
-        if (n === 0 && k === 0) continue;
+        if (n === 0 && (k === 0 || k === 1)) continue;
         for (const side of [-1, 1]) {
           if (rand() > 0.3) broadleaf(x + (rand() - 0.5) * 1800, zs + side * (halfStreetGap() + 250 + rand() * 300), 0.8 + rand() * 0.5);
           if (rand() > 0.4) broadleaf(x + (rand() - 0.5) * 2200, zs + side * (FRONT_SETBACK + 1400 + rand() * 900), 0.9 + rand() * 0.6);

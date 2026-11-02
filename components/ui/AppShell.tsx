@@ -8,6 +8,7 @@ import { ControlsHelp, Crosshair, DirectionsBanner, FadeOverlay, InteractionProm
 import { Icon } from "./Icon";
 import { InfoPanel } from "./InfoPanel";
 import { NavigationPanel } from "./NavigationPanel";
+import { PlaceBadge, TownDirections, TownNavigation } from "./TownNavigation";
 import { HouseToolbar, RoomToolbar, ToyToolbar, WorldDock } from "./Toolbars";
 
 const Experience = dynamic(() => import("@/components/three/Experience"), {
@@ -49,7 +50,7 @@ function useKeyboard() {
           if (s.mode === "walk" || s.mode === "drive") s.setMapExpanded(!s.mapExpanded);
           break;
         case "KeyN":
-          if (s.mode !== "interior" && s.mode !== "transition" && s.mode !== "house" && s.mode !== "toy") s.setNavPanelOpen(!s.navPanelOpen);
+          if (s.mode !== "interior" && s.mode !== "transition" && s.mode !== "house") s.setNavPanelOpen(!s.navPanelOpen);
           break;
         case "Escape":
           if (s.spawning) s.cancelSpawn();
@@ -131,7 +132,8 @@ export function AppShell() {
       <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-3 sm:p-4">
         <Brand />
         <div className="flex flex-col items-center gap-2">
-          {mode === "interior" ? <InteriorHeader /> : <DirectionsBanner />}
+          {mode === "interior" ? <InteriorHeader /> : mode === "toy" ? <TownDirections /> : <DirectionsBanner />}
+          <PlaceBadge />
           <Toast />
         </div>
         <div className="hidden sm:block">
@@ -142,7 +144,7 @@ export function AppShell() {
       {/* Left column: details & navigation */}
       <div className="pointer-events-none absolute left-3 top-20 flex flex-col gap-3 sm:left-4 sm:top-24">
         <InfoPanel />
-        {mode !== "interior" && mode !== "transition" && mode !== "house" && mode !== "toy" && <NavigationPanel />}
+        {mode === "toy" ? <TownNavigation /> : mode !== "interior" && mode !== "transition" && mode !== "house" && <NavigationPanel />}
       </div>
 
       {/* Bottom */}
@@ -153,7 +155,7 @@ export function AppShell() {
         {mode === "toy" && (
           <>
             <p className="pointer-events-none hidden rounded-full bg-slate-900/50 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur sm:block">
-              W/S to walk · A/D to turn · Shift to run · Space to jump · click the rug to shrink into Carpet World
+              W/S to walk · A/D to turn · N for the town map · F to fly · H to ride · click the rug to shrink into Carpet World
             </p>
             <ToyToolbar />
           </>

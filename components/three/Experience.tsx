@@ -23,6 +23,8 @@ import { RugScene } from "./RugScene";
 import { SpawnPicker } from "./toys/SpawnPicker";
 import { Toy } from "./toys/Toy";
 import { ToyController } from "./toys/ToyController";
+import { TownRoute } from "./town/TownRoute";
+import { ToyStoryTown } from "./town/ToyStoryTown";
 import { WalkingController } from "./WalkingController";
 
 function SceneEnvironment() {
@@ -59,7 +61,7 @@ export default function Experience() {
       }}
     >
       <color attach="background" args={["#cfe3f0"]} />
-      <fog attach="fog" args={["#d9e9f3", 4000, 42000]} />
+      <fog attach="fog" args={["#d9e9f3", 8000, 90000]} />
       <AdaptiveDpr pixelated={false} />
       <Suspense fallback={null}>
         <SceneEnvironment />
@@ -77,6 +79,8 @@ export default function Experience() {
           <HouseInterior />
           <HouseExterior />
           <Neighborhood />
+          <ToyStoryTown />
+          <TownRoute />
         </group>
         <Toy />
       </group>

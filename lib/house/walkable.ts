@@ -1,3 +1,5 @@
+import { TOWN_WALLS } from "../town/colliders";
+import { SURFACES } from "../town/config";
 import { RUG } from "../world/roads";
 import {
   ANDY_ROOM,
@@ -35,7 +37,7 @@ export interface WallSegment {
 
 /** Tallest ledge a toy can step up onto without jumping. */
 export const STEP_HEIGHT = 45;
-export const WORLD_LIMITS: Rect = { x0: -19000, x1: 18000, z0: -4000, z1: 36000 };
+export const WORLD_LIMITS: Rect = { x0: -79000, x1: 79000, z0: -17000, z1: 76000 };
 
 const GARAGE: Rect = { x0: -1904, x1: HOUSE.x0 - SHELL, z0: -150, z1: 600 };
 const PORCH: Rect = { x0: -1010, x1: -590, z0: HOUSE.z1, z1: HOUSE.z1 + SHELL + 180 };
@@ -95,7 +97,27 @@ export const WALLS: WallSegment[] = [
   // Railing around the stair opening upstairs; the top of the stairs stays open.
   { ax: STAIR_VOID.x0, az: STAIR_VOID.z1, bx: STAIR_VOID.x1, bz: STAIR_VOID.z1, y0: UPPER_Y - 20, y1: UPPER_Y + 92 },
   { ax: STAIR_VOID.x0, az: STAIR_VOID.z0, bx: STAIR_VOID.x0, bz: STAIR_VOID.z1, y0: UPPER_Y - 20, y1: UPPER_Y + 92 },
+  ...TOWN_WALLS,
 ];
+
+/** Buckets walls into a coarse grid so the toy only tests the ones nearby. */
+const CELL = 2000;
+const grid = new Map<string, WallSegment[]>();
+for (const w of WALLS) {
+  const cx0 = Math.floor((Math.min(w.ax, w.bx) - 50) / CELL);
+  const cx1 = Math.floor((Math.max(w.ax, w.bx) + 50) / CELL);
+  const cz0 = Math.floor((Math.min(w.az, w.bz) - 50) / CELL);
+  const cz1 = Math.floor((Math.max(w.az, w.bz) + 50) / CELL);
+  for (let i = cx0; i <= cx1; i++)
+    for (let j = cz0; j <= cz1; j++) {
+      const key = `${i},${j}`;
+      const list = grid.get(key);
+      if (list) list.push(w);
+      else grid.set(key, [w]);
+    }
+}
+const NO_WALLS: WallSegment[] = [];
+export const wallsNear = (x: number, z: number) => grid.get(`${Math.floor(x / CELL)},${Math.floor(z / CELL)}`) ?? NO_WALLS;
 
 const RUG_RECT: Rect = { x0: -RUG.width / 2, x1: RUG.width / 2, z0: -RUG.depth / 2, z1: RUG.depth / 2 };
 
@@ -116,8 +138,20 @@ export function groundHeight(x: number, z: number, y: number) {
   for (const s of PORCH_STEPS) if (inRect(p, s.r)) return s.h;
   if (inRect(p, PATIO_STEP)) return EXT_Y + 35;
   if (inRect(p, PATIO)) return EXT_Y + 25;
+  for (const s of SURFACES) {
+    if (!inRect(p, s.rect)) continue;
+    if (s.ramp) {
+      const v = s.ramp.axis === "x" ? x : z;
+      const t = Math.min(1, Math.max(0, (v - s.ramp.from) / (s.ramp.to - s.ramp.from)));
+      return s.ramp.y0 + t * (s.y - s.ramp.y0);
+    }
+    if (y > s.y - STEP_HEIGHT - 20) return s.y;
+  }
+  if (Math.abs(x) > RES_STREET_HALF) return EXT_Y;
   return EXT_Y + streetHeight(z);
 }
+
+const RES_STREET_HALF = 18900;
 
 const HALF_STREET = (STREET.z1 - STREET.z0) / 2;
 const STREET_CENTER0 = (STREET.z0 + STREET.z1) / 2;
@@ -136,7 +170,7 @@ function streetHeight(z: number) {
 /** Pushes a circle at height `y` out of every wall it overlaps. */
 export function resolveWalls(p: { x: number; z: number }, radius: number, y: number) {
   for (let pass = 0; pass < 2; pass++) {
-    for (const w of WALLS) {
+    for (const w of wallsNear(p.x, p.z)) {
       if (y < w.y0 || y >= w.y1 - 10) continue;
       const dx = w.bx - w.ax;
       const dz = w.bz - w.az;

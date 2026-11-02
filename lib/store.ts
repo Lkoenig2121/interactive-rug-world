@@ -1,5 +1,9 @@
 import { create } from "zustand";
-import { currentOrigin, poseOnRoad, resetCar, resetPlayer, runtime } from "./runtime";
+import { EXT_Y } from "./house/layout";
+import { groundHeight } from "./house/walkable";
+import { currentOrigin, poseOnRoad, resetCar, resetPlayer, runtime, type Mount } from "./runtime";
+import { landmarkById } from "./town/config";
+import { planTownRoute, type TownRoute } from "./town/navigation";
 import { buildingById, poseInFrontOf } from "./world/buildings";
 import { pointInsideAnyBox, worldColliders } from "./world/colliders";
 import { dist, yawToRight } from "./world/geometry";
@@ -70,6 +74,17 @@ interface State {
   toy: ToyKind | null;
   /** A toy waiting for you to click where it should be dropped. */
   spawning: ToyKind | null;
+  /** Town navigation (house scale): chosen landmark, its road route, and whether we're following it. */
+  townDestination: string | null;
+  townRoute: TownRoute | null;
+  townNavigating: boolean;
+  townAutopilot: boolean;
+  /** How the toy gets around town: on foot or in its RC car. */
+  travel: "walk" | "drive";
+  mount: Mount;
+  /** District and nearby landmark around the toy, for the location badge. */
+  place: { district: string | null; landmark: string | null } | null;
+  townMapOpen: boolean;
 
   setHovered: (id: string | null) => void;
   select: (s: Selection) => void;
@@ -110,7 +125,22 @@ interface State {
   setNavPanelOpen: (v: boolean) => void;
   setMapExpanded: (v: boolean) => void;
   setShowHelp: (v: boolean) => void;
+
+  setTownDestination: (id: string | null) => void;
+  recomputeTownRoute: () => void;
+  /** Starts following the route; drops a toy at Andy's front door first if none is out. */
+  startTownNavigation: (autopilot: boolean) => void;
+  stopTownNavigation: () => void;
+  setTravel: (t: "walk" | "drive") => void;
+  setMount: (m: Mount) => void;
+  setPlace: (p: State["place"]) => void;
+  setTownMapOpen: (v: boolean) => void;
+  /** Fades out, moves the toy, and fades back in (doors, fast travel). */
+  teleportToy: (p: { x: number; y: number; z: number }, yaw: number, toast?: string) => void;
 }
+
+/** Andy's front walk: where town routes start before a toy is out, and where one is dropped for navigation. */
+const TOWN_HOME = { x: -800, z: 950 };
 
 let flightId = 0;
 let commandId = 0;
@@ -174,6 +204,14 @@ export const useStore = create<State>((set, get) => {
     showHelp: true,
     toy: null,
     spawning: null,
+    townDestination: null,
+    townRoute: null,
+    townNavigating: false,
+    townAutopilot: false,
+    travel: "walk",
+    mount: "none",
+    place: null,
+    townMapOpen: false,
 
     setHovered: (id) => set({ hoveredId: id }),
     select: (selection) => set({ selection }),
@@ -257,8 +295,9 @@ export const useStore = create<State>((set, get) => {
     spawnToy: (p, facing) => {
       const kind = get().spawning;
       if (!kind) return;
-      Object.assign(runtime.toy, { x: p.x, y: p.y, z: p.z, vy: 0, speed: 0, yaw: facing, camYaw: facing });
-      set({ toy: kind, spawning: null });
+      Object.assign(runtime.toy, { x: p.x, y: p.y, z: p.z, vy: 0, speed: 0, yaw: facing, camYaw: facing, mount: "none" });
+      set({ toy: kind, spawning: null, mount: "none", travel: "walk" });
+      get().recomputeTownRoute();
       get().goToToy();
     },
 
@@ -407,5 +446,66 @@ export const useStore = create<State>((set, get) => {
     setNavPanelOpen: (navPanelOpen) => set({ navPanelOpen }),
     setMapExpanded: (mapExpanded) => set({ mapExpanded }),
     setShowHelp: (showHelp) => set({ showHelp }),
+
+    setTownDestination: (id) => {
+      if (!id || !landmarkById[id]) {
+        set({ townDestination: null, townRoute: null, townNavigating: false, townAutopilot: false });
+        return;
+      }
+      const from = get().toy ? runtime.toy : TOWN_HOME;
+      set({ townDestination: id, townRoute: planTownRoute(from, landmarkById[id]), townNavigating: false, townAutopilot: false });
+    },
+
+    recomputeTownRoute: () => {
+      const id = get().townDestination;
+      if (!id) return;
+      runtime.town.nav.routeIndex = 0;
+      set({ townRoute: planTownRoute(get().toy ? runtime.toy : TOWN_HOME, landmarkById[id]) });
+    },
+
+    startTownNavigation: (autopilot) => {
+      const s = get();
+      if (!s.townDestination) return;
+      if (!s.toy) {
+        Object.assign(runtime.toy, { x: TOWN_HOME.x, y: groundHeight(TOWN_HOME.x, TOWN_HOME.z, EXT_Y), z: TOWN_HOME.z, vy: 0, speed: 0, yaw: Math.PI, camYaw: Math.PI });
+        set({ toy: "cowboy" });
+      }
+      if (s.travel === "drive" && runtime.toy.mount === "none") get().setMount("car");
+      get().recomputeTownRoute();
+      set({ townNavigating: true, townAutopilot: autopilot, navPanelOpen: false });
+      if (get().mode !== "toy") get().goToToy();
+    },
+
+    stopTownNavigation: () => set({ townNavigating: false, townAutopilot: false }),
+
+    setTravel: (travel) => {
+      set({ travel });
+      if (get().mode === "toy") {
+        if (travel === "drive" && runtime.toy.mount !== "car") get().setMount("car");
+        if (travel === "walk" && runtime.toy.mount === "car") get().setMount("none");
+      }
+    },
+
+    setMount: (mount) => {
+      runtime.toy.mount = mount;
+      if (mount === "fly") runtime.toy.vy = 0;
+      set({ mount, travel: mount === "car" ? "drive" : mount === "none" ? "walk" : get().travel });
+    },
+
+    setPlace: (place) => {
+      const cur = get().place;
+      if (cur?.district === place?.district && cur?.landmark === place?.landmark) return;
+      set({ place });
+    },
+    setTownMapOpen: (townMapOpen) => set({ townMapOpen }),
+
+    teleportToy: (p, yaw, toast) => {
+      fade(() => {
+        Object.assign(runtime.toy, { x: p.x, y: p.y, z: p.z, vy: 0, speed: 0, yaw, camYaw: yaw });
+        runtime.town.snapCamera = true;
+        if (toast) get().showToast(toast);
+        if (get().townDestination) get().recomputeTownRoute();
+      });
+    },
   };
 });

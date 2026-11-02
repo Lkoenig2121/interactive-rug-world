@@ -440,6 +440,44 @@ function Gazebo({ p }: { p: [number, number, number] }) {
   );
 }
 
+function Mailbox() {
+  return (
+    <group position={[-620, EXT_Y, HOUSE.z1 + SHELL + 280]}>
+      <C p={[0, 0, 0]} r={3} h={90} c="#6b7280" />
+      <B p={[0, 90, 0]} s={[28, 22, 44]} c="#1d4ed8" />
+      <B p={[0, 104, 8]} s={[30, 4, 28]} c="#1e3a8a" />
+      <B p={[0, 70, -4]} s={[18, 14, 2]} c="#f8fafc" />
+    </group>
+  );
+}
+
+function Bicycle() {
+  return (
+    <group position={[-980, EXT_Y, HOUSE.z1 + SHELL + 140]} rotation-y={0.5}>
+      <C p={[-28, 0, 0]} r={18} h={3} c="#1f2937" seg={16} />
+      <C p={[32, 0, 0]} r={18} h={3} c="#1f2937" seg={16} />
+      <B p={[2, 28, 0]} s={[58, 4, 4]} c="#ef4444" />
+      <B p={[-6, 40, 0]} s={[4, 28, 4]} c="#ef4444" />
+      <B p={[4, 52, 0]} s={[22, 4, 10]} c="#111827" />
+      <B p={[22, 36, 0]} s={[4, 4, 28]} c="#111827" />
+    </group>
+  );
+}
+
+function BasketHoop() {
+  const x = (GARAGE.x0 + GARAGE.x1) / 2 + 320;
+  const z = GARAGE.z1 + 80;
+  return (
+    <group position={[x, EXT_Y, z]}>
+      <C p={[0, 0, 0]} r={6} h={280} c="#9ca3af" />
+      <B p={[0, 280, 8]} s={[90, 60, 6]} c="#f8fafc" />
+      <mesh position={[0, 258, 22]} rotation-x={Math.PI / 2} material={mat("#ea580c", { roughness: 0.4 })}>
+        <torusGeometry args={[16, 1.6, 8, 20]} />
+      </mesh>
+    </group>
+  );
+}
+
 function Yard() {
   const shrubs = useMemo(() => {
     const out: { p: [number, number, number]; r: number }[] = [];
@@ -493,6 +531,19 @@ function Yard() {
       <Tree p={[250, EXT_Y, 1150]} seed={4} />
       <Tree p={[450, EXT_Y, -2050]} seed={9} scale={1.15} />
       <Tree p={[-2000, EXT_Y, -900]} seed={13} scale={0.9} />
+      {/* Mailbox, bicycle, basketball hoop and scattered toys. */}
+      <Mailbox />
+      <Bicycle />
+      <BasketHoop />
+      <S p={[180, EXT_Y + 18, 780]} r={18} c="#ef4444" />
+      <S p={[210, EXT_Y + 10, 800]} r={10} c="#facc15" />
+      <group position={[-350, EXT_Y, 720]} rotation-y={0.4}>
+        <B p={[0, 0, 0]} s={[70, 28, 42]} c="#c0392b" />
+        <C p={[-28, 0, 22]} r={8} h={4} c="#1d1d1f" />
+        <C p={[28, 0, 22]} r={8} h={4} c="#1d1d1f" />
+        <C p={[-28, 0, -22]} r={8} h={4} c="#1d1d1f" />
+        <C p={[28, 0, -22]} r={8} h={4} c="#1d1d1f" />
+      </group>
       {/* Garden bed along the back fence */}
       <B p={[-750, EXT_Y, -2340]} s={[2600, 6, 90]} c="#5b3a24" rough={1} />
       {Array.from({ length: 22 }, (_, i) => (
