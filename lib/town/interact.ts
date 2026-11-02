@@ -57,6 +57,15 @@ export function townInteraction(t: Toy, kind: ToyKind | null): Interaction | nul
     const l = landmarkById[h.landmark];
     const p = hotspotWorld(h);
     if (dist(t, p) > h.r || Math.abs(t.y - landmarkFloor(l)) > 120) continue;
+    if (h.game) {
+      return {
+        label: h.label,
+        action: () => {
+          trigger(h.id);
+          useStore.getState().openArcade(h.game!);
+        },
+      };
+    }
     return { label: h.label, action: () => trigger(h.id, h.toast) };
   }
 

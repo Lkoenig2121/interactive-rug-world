@@ -9,6 +9,8 @@ import { Icon } from "./Icon";
 import { InfoPanel } from "./InfoPanel";
 import { NavigationPanel } from "./NavigationPanel";
 import { PlaceBadge, TownDirections, TownNavigation } from "./TownNavigation";
+import { ArcadeCabinet } from "./ArcadeCabinet";
+import { ArrowPicker } from "./ArrowPicker";
 import { HouseToolbar, RoomToolbar, ToyToolbar, WorldDock } from "./Toolbars";
 
 const Experience = dynamic(() => import("@/components/three/Experience"), {
@@ -25,7 +27,7 @@ function LoadingScreen() {
   );
 }
 
-const GAME_KEYS = new Set(["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]);
+const GAME_KEYS = new Set(["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "KeyW", "KeyA", "KeyS", "KeyD"]);
 
 function useKeyboard() {
   useEffect(() => {
@@ -33,7 +35,12 @@ function useKeyboard() {
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
       const s = useStore.getState();
-      const playing = s.mode === "walk" || s.mode === "drive" || s.mode === "interior" || s.mode === "toy";
+      if (s.arcadeGame) {
+        if (GAME_KEYS.has(e.code) || e.code === "KeyE") e.preventDefault();
+        if (e.code === "Escape" && !e.repeat) s.closeArcade();
+        return;
+      }
+      const playing = s.mode === "walk" || s.mode === "drive" || s.mode === "interior" || s.mode === "toy" || s.mode === "room" || s.mode === "house" || s.mode === "overhead";
       if (playing && GAME_KEYS.has(e.code)) e.preventDefault();
       runtime.keys.add(e.code);
       if (e.repeat) return;
@@ -53,7 +60,8 @@ function useKeyboard() {
           if (s.mode !== "interior" && s.mode !== "transition" && s.mode !== "house") s.setNavPanelOpen(!s.navPanelOpen);
           break;
         case "Escape":
-          if (s.spawning) s.cancelSpawn();
+          if (s.arrowPicker) s.setArrowPicker(null);
+          else if (s.spawning) s.cancelSpawn();
           else if (s.mode === "walk") s.goOverhead();
           else if (s.mode === "drive") s.setWalk();
           else if (s.mode === "interior") s.exitInterior();
@@ -149,6 +157,7 @@ export function AppShell() {
 
       {/* Bottom */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center gap-3 p-3 sm:p-4">
+        <ArrowPicker />
         <InteractionPrompt />
         <PointerHint />
         <SpawnHint />
@@ -163,7 +172,7 @@ export function AppShell() {
         {mode === "room" && (
           <>
             <p className="pointer-events-none hidden rounded-full bg-slate-900/50 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur sm:block">
-              Scroll out to explore the whole neighborhood · double-click anywhere on the rug to drop in
+              WASD to pan this room · click a doorway arrow to change rooms
             </p>
             <RoomToolbar />
           </>
@@ -171,7 +180,7 @@ export function AppShell() {
         {mode === "house" && (
           <>
             <p className="pointer-events-none hidden rounded-full bg-slate-900/50 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur sm:block">
-              Zoom in on Andy&apos;s room to see inside · double-click anywhere on the rug to drop in
+              WASD to pan · drag to look around · zoom in on Andy&apos;s room to see inside
             </p>
             <HouseToolbar />
           </>
@@ -190,6 +199,7 @@ export function AppShell() {
       )}
 
       <FadeOverlay />
+      <ArcadeCabinet />
     </main>
   );
 }

@@ -19,6 +19,7 @@ import {
 import { mat } from "@/lib/three/materials";
 import { tileTexture, wallTexture, woodFloorTexture } from "@/lib/three/textures";
 import { B, C, Geoms, quadXZ, rectMinusHole, S, sideFrame, wallPanels, type WallOpening } from "./kit";
+import { RoomArrows } from "./RoomArrows";
 
 const WALL_COLORS: Record<WallStyle, string> = {
   beige: "#efe3cc",
@@ -500,6 +501,7 @@ export function HouseInterior() {
       <LivingRoom />
       <Kitchen />
       <Foyer />
+      <RoomArrows />
     </group>
   );
 }

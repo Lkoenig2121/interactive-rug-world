@@ -3,6 +3,7 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
+import { TOY_INDOOR_ZOOM } from "@/lib/house/doors";
 import { EXT_Y, GROUND_Y, HOUSE, inRect, STOREY, UPPER_Y } from "@/lib/house/layout";
 import { groundHeight, onRug, resolveWalls, STEP_HEIGHT, wallsNear } from "@/lib/house/walkable";
 import { FOV, toyCameraPose } from "@/lib/three/cameraPoses";
@@ -78,6 +79,7 @@ export function ToyController() {
       const target = e.target as HTMLElement | null;
       if (e.repeat || (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA"))) return;
       const s = useStore.getState();
+      if (s.arcadeGame) return;
       const m = runtime.toy.mount;
       switch (e.code) {
         case "KeyF":
@@ -125,7 +127,9 @@ export function ToyController() {
     };
     const wheel = (e: WheelEvent) => {
       e.preventDefault();
-      t.camDist = clamp(t.camDist * Math.exp(e.deltaY * 0.0015), 40, t.mount === "none" ? 900 : 3000);
+      const indoor = inRect(t, HOUSE, 20) && t.mount !== "fly";
+      const maxCam = indoor ? TOY_INDOOR_ZOOM : t.mount === "none" ? 900 : 3000;
+      t.camDist = clamp(t.camDist * Math.exp(e.deltaY * 0.0015), 40, maxCam);
     };
     el.addEventListener("pointerdown", down);
     window.addEventListener("pointerup", up);
@@ -146,14 +150,15 @@ export function ToyController() {
     const store = useStore.getState();
     const pace = PACE[t.mount];
     runtime.town.clock = clock.elapsedTime;
+    const frozen = !!store.arcadeGame;
 
-    let fwd = (k.has("KeyW") || k.has("ArrowUp") ? 1 : 0) - (k.has("KeyS") || k.has("ArrowDown") ? 1 : 0);
-    let turn = (k.has("KeyA") || k.has("ArrowLeft") ? 1 : 0) - (k.has("KeyD") || k.has("ArrowRight") ? 1 : 0);
-    let running = k.has("ShiftLeft") || k.has("ShiftRight");
+    let fwd = frozen ? 0 : (k.has("KeyW") || k.has("ArrowUp") ? 1 : 0) - (k.has("KeyS") || k.has("ArrowDown") ? 1 : 0);
+    let turn = frozen ? 0 : (k.has("KeyA") || k.has("ArrowLeft") ? 1 : 0) - (k.has("KeyD") || k.has("ArrowRight") ? 1 : 0);
+    let running = !frozen && (k.has("ShiftLeft") || k.has("ShiftRight"));
 
     // Autopilot steers along the route until you touch the controls.
     const route = store.townRoute;
-    if (store.townAutopilot && route && route.points.length > 1) {
+    if (!frozen && store.townAutopilot && route && route.points.length > 1) {
       if (fwd !== 0 || turn !== 0) useStore.setState({ townAutopilot: false });
       else {
         const nav = runtime.town.nav;
@@ -171,60 +176,70 @@ export function ToyController() {
       }
     }
 
-    t.turn = turn;
-    t.yaw = wrapAngle(t.yaw + turn * pace.turn * dt * (t.mount === "car" ? clamp(Math.abs(t.speed) / 600, 0.25, 1) * Math.sign(t.speed || 1) : 1));
-    const targetSpeed = fwd > 0 ? (running ? pace.run : pace.walk) * fwd : fwd < 0 ? -pace.back : 0;
-    t.speed += (targetSpeed - t.speed) * Math.min(1, dt * pace.accel);
-
-    // The camera swings back behind the toy unless you are dragging to look around.
-    if (!dragging.current) {
-      const rate = Math.abs(t.speed) > 5 || turn !== 0 ? 5 : 2;
-      t.camYaw += wrapAngle(t.yaw - t.camYaw) * Math.min(1, dt * rate);
-    }
-
-    const dir = yawToDir(t.yaw);
-    const step = t.speed * dt;
-    const flying = t.mount === "fly";
-    const tryMove = (dx: number, dz: number) => {
-      const p = { x: t.x + dx, z: t.z + dz };
-      resolveWalls(p, pace.radius, t.y + 2);
-      const g = groundHeight(p.x, p.z, t.y);
-      if (!flying && g > t.y + STEP_HEIGHT) return false;
-      t.x = p.x;
-      t.z = p.z;
-      return true;
-    };
-    // Long steps (fast mounts) are split so walls can't be skipped.
-    const sub = Math.max(1, Math.ceil(Math.abs(step) / (pace.radius * 0.8)));
-    for (let i = 0; i < sub && Math.abs(step) > 0.001; i++) {
-      const s = step / sub;
-      if (!tryMove(dir.x * s, dir.z * s) && !tryMove(dir.x * s, 0)) tryMove(0, dir.z * s);
-    }
-
-    const ground = groundHeight(t.x, t.z, t.y);
-    if (flying) {
-      const climb = (k.has("Space") ? 1 : 0) - (k.has("KeyC") || k.has("ControlLeft") ? 1 : 0);
-      const autoClimb = store.townAutopilot ? clamp((ground + 500 - t.y) / 200, -1, 1) : 0;
-      t.vy += ((climb || autoClimb) * 700 - t.vy) * Math.min(1, dt * 4);
-      t.y = clamp(t.y + t.vy * dt, ground, FLY_CEILING);
+    if (frozen) {
+      t.turn = 0;
+      t.speed = 0;
+      t.vy = 0;
     } else {
-      const grounded = t.vy <= 0 && t.y - ground < 4;
-      if (grounded) {
-        t.y = Math.max(ground, t.y - 400 * dt);
-        if (t.y - ground < 4) t.y = ground;
-        t.vy = 0;
-        if (k.has("Space") && pace.jump > 0) t.vy = pace.jump;
+      t.turn = turn;
+      t.yaw = wrapAngle(t.yaw + turn * pace.turn * dt * (t.mount === "car" ? clamp(Math.abs(t.speed) / 600, 0.25, 1) * Math.sign(t.speed || 1) : 1));
+      const targetSpeed = fwd > 0 ? (running ? pace.run : pace.walk) * fwd : fwd < 0 ? -pace.back : 0;
+      t.speed += (targetSpeed - t.speed) * Math.min(1, dt * pace.accel);
+
+      // The camera swings back behind the toy unless you are dragging to look around.
+      if (!dragging.current) {
+        const rate = Math.abs(t.speed) > 5 || turn !== 0 ? 5 : 2;
+        t.camYaw += wrapAngle(t.yaw - t.camYaw) * Math.min(1, dt * rate);
       }
-      if (t.vy !== 0 || t.y > ground) {
-        t.vy -= GRAVITY * dt;
-        t.y += t.vy * dt;
-        if (t.y <= ground) {
-          t.y = ground;
+
+      const dir = yawToDir(t.yaw);
+      const step = t.speed * dt;
+      const flying = t.mount === "fly";
+      const tryMove = (dx: number, dz: number) => {
+        const p = { x: t.x + dx, z: t.z + dz };
+        resolveWalls(p, pace.radius, t.y + 2);
+        const g = groundHeight(p.x, p.z, t.y);
+        if (!flying && g > t.y + STEP_HEIGHT) return false;
+        t.x = p.x;
+        t.z = p.z;
+        return true;
+      };
+      // Long steps (fast mounts) are split so walls can't be skipped.
+      const sub = Math.max(1, Math.ceil(Math.abs(step) / (pace.radius * 0.8)));
+      for (let i = 0; i < sub && Math.abs(step) > 0.001; i++) {
+        const s = step / sub;
+        if (!tryMove(dir.x * s, dir.z * s) && !tryMove(dir.x * s, 0)) tryMove(0, dir.z * s);
+      }
+
+      const ground = groundHeight(t.x, t.z, t.y);
+      if (flying) {
+        const climb = (k.has("Space") ? 1 : 0) - (k.has("KeyC") || k.has("ControlLeft") ? 1 : 0);
+        const autoClimb = store.townAutopilot ? clamp((ground + 500 - t.y) / 200, -1, 1) : 0;
+        t.vy += ((climb || autoClimb) * 700 - t.vy) * Math.min(1, dt * 4);
+        t.y = clamp(t.y + t.vy * dt, ground, FLY_CEILING);
+      } else {
+        const grounded = t.vy <= 0 && t.y - ground < 4;
+        if (grounded) {
+          t.y = Math.max(ground, t.y - 400 * dt);
+          if (t.y - ground < 4) t.y = ground;
           t.vy = 0;
+          if (k.has("Space") && pace.jump > 0) t.vy = pace.jump;
+        }
+        if (t.vy !== 0 || t.y > ground) {
+          t.vy -= GRAVITY * dt;
+          t.y += t.vy * dt;
+          if (t.y <= ground) {
+            t.y = ground;
+            t.vy = 0;
+          }
         }
       }
+      t.phase += dt * t.speed * (t.mount === "horse" ? 0.012 : t.mount === "none" ? 0.085 : 0.02);
     }
-    t.phase += dt * t.speed * (t.mount === "horse" ? 0.012 : t.mount === "none" ? 0.085 : 0.02);
+
+    if (inRect(t, HOUSE, 20) && t.mount !== "fly" && t.camDist > TOY_INDOOR_ZOOM) {
+      t.camDist += (TOY_INDOOR_ZOOM - t.camDist) * Math.min(1, dt * 6);
+    }
 
     // Follow camera, pulled in when a wall would come between it and the toy.
     const pose = toyCameraPose({ ...t, y: t.y + pace.lift });
@@ -251,8 +266,11 @@ export function ToyController() {
     checkTimer.current -= dt;
     if (checkTimer.current <= 0) {
       checkTimer.current = 0.15;
-      const onTheRug = onRug(t) && t.y > -2 && t.y < 40 && t.mount === "none";
-      store.setInteraction(onTheRug ? { label: "Shrink into Carpet World", action: () => useStore.getState().enterWorld({ at: { x: t.x, z: t.z } }) } : townInteraction(t, store.toy));
+      if (frozen) store.setInteraction(null);
+      else {
+        const onTheRug = onRug(t) && t.y > -2 && t.y < 40 && t.mount === "none";
+        store.setInteraction(onTheRug ? { label: "Shrink into Carpet World", action: () => useStore.getState().enterWorld({ at: { x: t.x, z: t.z } }) } : townInteraction(t, store.toy));
+      }
     }
 
     // Turn-by-turn progress, re-routing when you wander off, and arrival.

@@ -1,3 +1,4 @@
+import type { ArcadeGame } from "../store";
 import { landmarkById, toWorld } from "./config";
 
 /** Something in the town you can use with E, in its landmark's local space. */
@@ -9,11 +10,12 @@ export interface Hotspot {
   r: number;
   label: string;
   toast?: string;
+  game?: ArcadeGame;
 }
 
 export const HOTSPOTS: Hotspot[] = [
-  { id: "arcade-w", landmark: "pizza", x: -2100, z: -650, r: 380, label: "Play Space Blasters", toast: "BLAM! New high score: 99,950." },
-  { id: "arcade-e", landmark: "pizza", x: 2100, z: -650, r: 380, label: "Play Alien Invaders", toast: "Wave cleared! The aliens are impressed." },
+  { id: "arcade-w", landmark: "pizza", x: -2100, z: -650, r: 380, label: "Play Space Blasters", game: "blasters" },
+  { id: "arcade-e", landmark: "pizza", x: 2100, z: -650, r: 380, label: "Play Alien Invaders", game: "invaders" },
   { id: "claw", landmark: "pizza", x: 1900, z: 680, r: 260, label: "Try the claw machine", toast: "The claw has chosen! Ooooh." },
   { id: "pizza-order", landmark: "pizza", x: 0, z: -1200, r: 400, label: "Order a pizza", toast: "One extra-large pepperoni, coming right up." },
   { id: "collectibles", landmark: "toybarn", x: 0, z: -1300, r: 520, label: "Admire the Roundup collection", toast: "A complete Roundup set: cowboy, cowgirl, prospector and horse. Rare!" },

@@ -90,7 +90,8 @@ export function Speedometer() {
 
 export function InteractionPrompt() {
   const interaction = useStore((s) => s.interaction);
-  if (!interaction) return null;
+  const arcade = useStore((s) => s.arcadeGame);
+  if (!interaction || arcade) return null;
   return (
     <button
       onClick={() => interaction.action()}
@@ -134,15 +135,16 @@ export function FadeOverlay() {
 
 const HELP: Record<string, [string, string][]> = {
   room: [
-    ["Drag", "Pan anywhere"],
-    ["Right-drag", "Rotate & tilt"],
-    ["Scroll", "Zoom out to the whole world"],
+    ["W A S D / arrows", "Pan inside this room"],
+    ["Drag", "Rotate & tilt"],
+    ["Scroll", "Zoom (stays inside the house)"],
+    ["Door arrows", "The only way to another room"],
     ["Click", "Inspect buildings & roads"],
     ["Double-click", "Drop into the rug there"],
   ],
   overhead: [
-    ["Drag", "Pan the map"],
-    ["Right-drag", "Rotate"],
+    ["W A S D / arrows", "Pan the map"],
+    ["Drag", "Rotate & tilt"],
     ["Click", "Pick a place"],
     ["Esc", "Back to the room"],
   ],
@@ -170,12 +172,12 @@ const HELP: Record<string, [string, string][]> = {
     ["Space", "Jump / climb while flying"],
     ["F / H / R", "Fly / ride / RC car"],
     ["N", "Town map & directions"],
-    ["E", "Enter a building"],
+    ["E", "Enter a doorway or building"],
     ["Click the rug", "Shrink into Carpet World"],
   ],
   house: [
-    ["Drag", "Pan anywhere"],
-    ["Right-drag", "Orbit & tilt"],
+    ["W A S D / arrows", "Pan the neighborhood"],
+    ["Drag", "Rotate & tilt"],
     ["Scroll", "Zoom (into Andy's room too)"],
     ["Double-click", "Drop into the rug there"],
     ["Esc", "Back to Andy's room"],
@@ -280,7 +282,7 @@ export function TouchControls() {
     () => window.matchMedia("(pointer: coarse)").matches,
     () => false,
   );
-  if (!touch || (mode !== "walk" && mode !== "drive" && mode !== "interior" && mode !== "toy")) return null;
+  if (!touch || (mode !== "walk" && mode !== "drive" && mode !== "interior" && mode !== "toy" && mode !== "room" && mode !== "house" && mode !== "overhead")) return null;
   return (
     <div className="pointer-events-auto grid grid-cols-3 gap-1.5">
       <span />

@@ -15,6 +15,7 @@ import type { InteriorId, ManeuverType, Pose, Route, Vec2 } from "./world/types"
 export type Mode = "room" | "transition" | "overhead" | "walk" | "drive" | "interior" | "house" | "toy";
 export type WorldMode = "walk" | "drive";
 export type ToyKind = "ranger" | "cowboy";
+export type ArcadeGame = "invaders" | "blasters";
 
 export type Selection =
   | { kind: "building"; id: string }
@@ -31,7 +32,8 @@ export type Flight =
 
 export interface CameraCommand {
   id: number;
-  kind: "zoomIn" | "zoomOut" | "reset";
+  kind: "zoomIn" | "zoomOut" | "reset" | "look";
+  lookAt?: { x: number; y: number; z: number };
 }
 
 export interface Hud {
@@ -85,10 +87,16 @@ interface State {
   /** District and nearby landmark around the toy, for the location badge. */
   place: { district: string | null; landmark: string | null } | null;
   townMapOpen: boolean;
+  /** Stacked doorway arrows the player must pick from. */
+  arrowPicker: string[] | null;
+  /** Pizza Planet cabinet currently filling the screen. */
+  arcadeGame: ArcadeGame | null;
 
   setHovered: (id: string | null) => void;
   select: (s: Selection) => void;
-  cameraCmd: (kind: CameraCommand["kind"]) => void;
+  cameraCmd: (kind: CameraCommand["kind"], lookAt?: { x: number; y: number; z: number }) => void;
+  /** Jump the explore camera into a room (from the neighborhood view if needed). */
+  lookRoom: (lookAt: { x: number; y: number; z: number }) => void;
 
   enterWorld: (opts?: { buildingId?: string; at?: Vec2; mode?: WorldMode }) => void;
   completeFlight: () => void;
@@ -135,6 +143,9 @@ interface State {
   setMount: (m: Mount) => void;
   setPlace: (p: State["place"]) => void;
   setTownMapOpen: (v: boolean) => void;
+  setArrowPicker: (ids: string[] | null) => void;
+  openArcade: (game: ArcadeGame) => void;
+  closeArcade: () => void;
   /** Fades out, moves the toy, and fades back in (doors, fast travel). */
   teleportToy: (p: { x: number; y: number; z: number }, yaw: number, toast?: string) => void;
 }
@@ -212,10 +223,24 @@ export const useStore = create<State>((set, get) => {
     mount: "none",
     place: null,
     townMapOpen: false,
+    arrowPicker: null,
+    arcadeGame: null,
 
     setHovered: (id) => set({ hoveredId: id }),
     select: (selection) => set({ selection }),
-    cameraCmd: (kind) => set({ cameraCommand: { id: ++commandId, kind } }),
+    cameraCmd: (kind, lookAt) => set({ cameraCommand: { id: ++commandId, kind, lookAt } }),
+    lookRoom: (lookAt) => {
+      const fromOutside = get().mode === "house" || get().mode === "transition";
+      set({
+        mode: fromOutside ? "room" : get().mode,
+        flight: fromOutside ? null : get().flight,
+        cameraCommand: { id: ++commandId, kind: "look", lookAt },
+        arrowPicker: null,
+      });
+    },
+    setArrowPicker: (arrowPicker) => set({ arrowPicker }),
+    openArcade: (arcadeGame) => set({ arcadeGame, townAutopilot: false, interaction: null }),
+    closeArcade: () => set({ arcadeGame: null }),
 
     enterWorld: (opts = {}) => {
       const next: WorldMode = opts.mode ?? runtime.lastWorldMode;
@@ -252,12 +277,15 @@ export const useStore = create<State>((set, get) => {
       set({
         mode: "transition",
         flight: { id: ++flightId, kind: "room" },
+        cameraCommand: null,
+        arrowPicker: null,
         spawning: null,
         autopilot: false,
         interaction: null,
         interiorId: null,
         interiorBuildingId: null,
         hud: null,
+        arcadeGame: null,
       });
     },
 
@@ -272,6 +300,7 @@ export const useStore = create<State>((set, get) => {
         interiorId: null,
         interiorBuildingId: null,
         selection: null,
+        arcadeGame: null,
       });
     },
 
@@ -280,12 +309,15 @@ export const useStore = create<State>((set, get) => {
       set({
         mode: "transition",
         flight: { id: ++flightId, kind: "house" },
+        cameraCommand: null,
+        arrowPicker: null,
         spawning: null,
         autopilot: false,
         interaction: null,
         selection: null,
         hoveredId: null,
         navPanelOpen: false,
+        arcadeGame: null,
       });
     },
 
