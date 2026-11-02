@@ -55,7 +55,7 @@ export function InfoPanel() {
   const enterWorld = useStore((s) => s.enterWorld);
   const setDestination = useStore((s) => s.setDestination);
   const startNavigation = useStore((s) => s.startNavigation);
-  if (!selection || (mode !== "room" && mode !== "overhead")) return null;
+  if (!selection || (mode !== "room" && mode !== "overhead" && mode !== "house")) return null;
   const close = () => select(null);
 
   if (selection.kind === "building") {

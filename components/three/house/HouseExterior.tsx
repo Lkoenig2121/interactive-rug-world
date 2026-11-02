@@ -4,11 +4,14 @@ import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import {
+  ANDY_ROOM,
   APERTURES,
   EAVE_Y,
   EXT_Y,
   GROUND_Y,
   HOUSE,
+  inRect,
+  isOutsideHouse,
   levelY,
   SHELL,
   STREET,
@@ -17,6 +20,7 @@ import {
   type Rect,
   type Side,
 } from "@/lib/house/layout";
+import { runtime } from "@/lib/runtime";
 import { useStore } from "@/lib/store";
 import { mat } from "@/lib/three/materials";
 import { brickTexture, concreteTexture, garageDoorTexture, shingleTexture, sidingTexture } from "@/lib/three/textures";
@@ -498,19 +502,35 @@ function Yard() {
   );
 }
 
+/** Within this distance of a target inside Andy's room, the walls and roof are cut away like a dollhouse. */
+const CUTAWAY_DISTANCE = 1300;
+
 /**
  * Andy's house from the outside. The walls and roof only show when the camera is outside,
- * so the room view can still look straight through them.
+ * and are cut away while the camera is focused on Andy's room so the rug stays in view.
  */
 export function HouseExterior() {
   const shell = useRef<THREE.Group>(null);
   const trims = useMemo(() => APERTURES.map((a, i) => <ApertureTrim key={i} a={a} />), []);
-  useFrame(({ camera }) => {
+  const visibleBeforeFlight = useRef(false);
+  useFrame(({ camera, controls }) => {
     if (!shell.current) return;
-    const mode = useStore.getState().mode;
-    const p = camera.position;
-    const outside = p.x > HOUSE.x1 + SHELL + 2 || p.x < HOUSE.x0 - SHELL - 2 || p.z > HOUSE.z1 + SHELL + 2 || p.z < HOUSE.z0 - SHELL - 2 || p.y > EAVE_Y + ROOF_RISE + 40;
-    shell.current.visible = mode === "house" || (mode === "transition" && outside);
+    const { mode, flight } = useStore.getState();
+    const toyOutside = isOutsideHouse(runtime.toy);
+    let visible = (mode === "room" || mode === "house" || mode === "transition") && isOutsideHouse(camera.position);
+    if (mode === "toy") {
+      visible = toyOutside;
+      visibleBeforeFlight.current = visible;
+    } else if (mode === "transition") {
+      // A flight that starts in the cutaway keeps it, unless it is flying out to the street view or a toy outside.
+      visible &&= visibleBeforeFlight.current || flight?.kind === "house" || (flight?.kind === "toy" && toyOutside);
+    } else {
+      const target = (controls as { target?: THREE.Vector3 } | null)?.target;
+      if (visible && target && inRect(target, ANDY_ROOM, 60) && camera.position.distanceTo(target) < CUTAWAY_DISTANCE) visible = false;
+      visibleBeforeFlight.current = visible;
+    }
+    shell.current.visible = visible;
+    runtime.houseShellVisible = visible;
   });
   return (
     <group>

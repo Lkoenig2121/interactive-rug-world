@@ -134,11 +134,11 @@ export function FadeOverlay() {
 
 const HELP: Record<string, [string, string][]> = {
   room: [
-    ["Drag", "Pan around the rug"],
+    ["Drag", "Pan anywhere"],
     ["Right-drag", "Rotate & tilt"],
-    ["Scroll", "Zoom"],
+    ["Scroll", "Zoom out to the whole world"],
     ["Click", "Inspect buildings & roads"],
-    ["Double-click", "Jump into the city"],
+    ["Double-click", "Drop into the rug there"],
   ],
   overhead: [
     ["Drag", "Pan the map"],
@@ -163,10 +163,20 @@ const HELP: Record<string, [string, string][]> = {
     ["E", "Park & go inside"],
     ["Esc", "Exit driving mode"],
   ],
+  toy: [
+    ["W / S", "Walk forward / back"],
+    ["A / D", "Turn"],
+    ["Shift", "Run"],
+    ["Space", "Jump"],
+    ["Drag / scroll", "Look around / zoom"],
+    ["Click the rug", "Shrink into Carpet World"],
+    ["Esc", "Explore view"],
+  ],
   house: [
-    ["Drag", "Pan around the street"],
+    ["Drag", "Pan anywhere"],
     ["Right-drag", "Orbit & tilt"],
-    ["Scroll", "Zoom"],
+    ["Scroll", "Zoom (into Andy's room too)"],
+    ["Double-click", "Drop into the rug there"],
     ["Esc", "Back to Andy's room"],
   ],
   interior: [
@@ -224,7 +234,7 @@ export function PointerHint() {
 export function InteriorHeader() {
   const id = useStore((s) => s.interiorId);
   const exit = useStore((s) => s.exitInterior);
-  const goToRoom = useStore((s) => s.goToRoom);
+  const goToRoom = useStore((s) => s.returnHome);
   if (!id) return null;
   const def = interiors[id];
   return (
@@ -269,7 +279,7 @@ export function TouchControls() {
     () => window.matchMedia("(pointer: coarse)").matches,
     () => false,
   );
-  if (!touch || (mode !== "walk" && mode !== "drive" && mode !== "interior")) return null;
+  if (!touch || (mode !== "walk" && mode !== "drive" && mode !== "interior" && mode !== "toy")) return null;
   return (
     <div className="pointer-events-auto grid grid-cols-3 gap-1.5">
       <span />

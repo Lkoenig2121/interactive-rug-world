@@ -2,14 +2,12 @@
 
 import { useMemo } from "react";
 import * as THREE from "three";
-import { BACK_FENCE_Z, EXT_Y, HEDGE, LOT, STREET } from "@/lib/house/layout";
+import { BACK_FENCE_Z, EXT_Y, HEDGE, LOT, STREET, STREET_SPACING, STREETS } from "@/lib/house/layout";
 import { asphaltTexture, concreteTexture, facadeTexture, fenceTexture, garageDoorTexture, grassTexture, hedgeTexture, shingleTexture, sidingTexture } from "@/lib/three/textures";
 import { seededRandom } from "@/lib/world/geometry";
 import { InstancedParts, placement } from "../Instanced";
 import { gableEnds, gableSlopes } from "./kit";
 
-const STREET_SPACING = 7800;
-const STREETS = 5;
 const LOTS_EACH_SIDE = 6;
 const X_EXTENT = LOT.width * (LOTS_EACH_SIDE + 0.5);
 const STREET_CENTER0 = (STREET.z0 + STREET.z1) / 2;
@@ -430,7 +428,7 @@ export function Sky() {
     [],
   );
   return (
-    <mesh material={material} renderOrder={-1} frustumCulled={false}>
+    <mesh material={material} renderOrder={-1} frustumCulled={false} raycast={() => null}>
       <sphereGeometry args={[100000, 32, 16]} />
     </mesh>
   );

@@ -6,6 +6,7 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import * as THREE from "three";
 import type { MapControls as MapControlsImpl } from "three-stdlib";
 import { easeInOutCubic, FOV, HOUSE_TARGET_Y, housePose, overheadPose, roomCameraPose } from "@/lib/three/cameraPoses";
+import { ANDY_ROOM, inRect } from "@/lib/house/layout";
 import { useStore } from "@/lib/store";
 
 interface Anim {
@@ -16,15 +17,21 @@ interface Anim {
   t: number;
 }
 
+/** The room, the house and the whole suburb around it. */
+const WORLD_BOUNDS = { x: [-19000, 18000], z: [-4000, 36000] } as const;
+
 /**
  * Google-Maps style controls: drag to pan, right-drag / two fingers to rotate and tilt, wheel to zoom.
- * Used for the room view and the in-world overhead map.
+ * The room and outside views can roam the whole world; the overhead map stays over the rug.
  */
 const VARIANTS = {
-  room: { min: 18, max: 820, polar: 1.38, near: 0.5, fov: FOV.room, y: 0, bounds: { x: [-260, 260], z: [-200, 280] } },
-  overhead: { min: 25, max: 640, polar: 1.2, near: 0.5, fov: FOV.overhead, y: 0, bounds: { x: [-260, 260], z: [-200, 280] } },
-  house: { min: 700, max: 16000, polar: 1.48, near: 5, fov: FOV.house, y: HOUSE_TARGET_Y, bounds: { x: [-9000, 9000], z: [-7000, 12000] } },
+  room: { min: 18, max: 30000, polar: 1.42, fov: FOV.room, world: true, bounds: WORLD_BOUNDS },
+  house: { min: 18, max: 30000, polar: 1.48, fov: FOV.house, world: true, bounds: WORLD_BOUNDS },
+  overhead: { min: 25, max: 640, polar: 1.2, fov: FOV.overhead, world: false, bounds: { x: [-260, 260], z: [-200, 280] } },
 } as const;
+
+/** Orbit height: the rug's floor inside Andy's room, the lawn everywhere else. */
+const orbitY = (t: THREE.Vector3) => (inRect(t, ANDY_ROOM) ? 0 : HOUSE_TARGET_Y);
 
 export function MapCameraControls({ variant }: { variant: keyof typeof VARIANTS }) {
   const ref = useRef<MapControlsImpl>(null);
@@ -48,11 +55,11 @@ export function MapCameraControls({ variant }: { variant: keyof typeof VARIANTS 
     // Aim at the point the camera is already looking at so mounting causes no jump.
     const dir = new THREE.Vector3();
     camera.getWorldDirection(dir);
-    const t = dir.y < -0.05 ? (cfg.y - camera.position.y) / dir.y : 100;
+    const y = variant === "house" ? HOUSE_TARGET_Y : 0;
+    const t = dir.y < -0.05 ? (y - camera.position.y) / dir.y : 100;
     c.target.copy(camera.position).addScaledVector(dir, t);
-    c.target.y = cfg.y;
+    c.target.y = y;
     camera.fov = cfg.fov;
-    camera.near = cfg.near;
     camera.updateProjectionMatrix();
     c.update();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -81,6 +88,12 @@ export function MapCameraControls({ variant }: { variant: keyof typeof VARIANTS 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cmd]);
 
+  const setNear = (near: number) => {
+    if (Math.abs(camera.near - near) < camera.near * 0.05) return;
+    camera.near = near;
+    camera.updateProjectionMatrix();
+  };
+
   useFrame((_, dt) => {
     const c = ref.current;
     if (!c) return;
@@ -95,7 +108,15 @@ export function MapCameraControls({ variant }: { variant: keyof typeof VARIANTS 
     }
     c.target.x = THREE.MathUtils.clamp(c.target.x, cfg.bounds.x[0], cfg.bounds.x[1]);
     c.target.z = THREE.MathUtils.clamp(c.target.z, cfg.bounds.z[0], cfg.bounds.z[1]);
-    c.target.y = cfg.y;
+    if (!cfg.world) {
+      c.target.y = 0;
+      setNear(0.5);
+      return;
+    }
+    // Glide between the rug's floor and the lawn instead of snapping when crossing the room's walls.
+    if (!a) c.target.y += (orbitY(c.target) - c.target.y) * Math.min(1, dt * 5);
+    // A near plane that grows with distance keeps depth precision across rug and suburb scales.
+    setNear(THREE.MathUtils.clamp(camera.position.distanceTo(c.target) * 0.004, 0.5, 20));
   });
 
   return (

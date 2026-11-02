@@ -3,15 +3,10 @@
 import { Edges } from "@react-three/drei";
 import type { ThreeEvent } from "@react-three/fiber";
 import { memo } from "react";
-import { useStore } from "@/lib/store";
+import { rugPickable as interactive, useStore } from "@/lib/store";
 import { buildingHeight, facingRotation } from "@/lib/world/buildings";
 import type { BuildingDef } from "@/lib/world/types";
 import { BuildingModel } from "./buildings/models";
-
-const interactive = () => {
-  const m = useStore.getState().mode;
-  return m === "room" || m === "overhead";
-};
 
 function Highlight({ b, strong }: { b: BuildingDef; strong: boolean }) {
   const h = buildingHeight(b);
@@ -50,7 +45,8 @@ export const Building = memo(function Building({ b }: { b: BuildingDef }) {
   const onClick = (e: ThreeEvent<MouseEvent>) => {
     if (!interactive() || e.delta > 5) return;
     e.stopPropagation();
-    select({ kind: "building", id: b.id });
+    if (useStore.getState().mode === "toy") useStore.getState().enterWorld({ buildingId: b.id });
+    else select({ kind: "building", id: b.id });
   };
   const onDoubleClick = (e: ThreeEvent<MouseEvent>) => {
     if (!interactive()) return;

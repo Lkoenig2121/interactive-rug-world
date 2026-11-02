@@ -8,8 +8,9 @@ import { findRoute, projectToNetwork } from "./world/pathfinding";
 import { ROAD_CLEARANCE } from "./world/roads";
 import type { InteriorId, ManeuverType, Pose, Route, Vec2 } from "./world/types";
 
-export type Mode = "room" | "transition" | "overhead" | "walk" | "drive" | "interior" | "house";
+export type Mode = "room" | "transition" | "overhead" | "walk" | "drive" | "interior" | "house" | "toy";
 export type WorldMode = "walk" | "drive";
+export type ToyKind = "ranger" | "cowboy";
 
 export type Selection =
   | { kind: "building"; id: string }
@@ -21,7 +22,8 @@ export type Flight =
   | { id: number; kind: "enter"; pose: Pose; next: WorldMode }
   | { id: number; kind: "room" }
   | { id: number; kind: "overhead" }
-  | { id: number; kind: "house" };
+  | { id: number; kind: "house" }
+  | { id: number; kind: "toy" };
 
 export interface CameraCommand {
   id: number;
@@ -64,6 +66,10 @@ interface State {
   navPanelOpen: boolean;
   mapExpanded: boolean;
   showHelp: boolean;
+  /** The toy you play as once it has been dropped somewhere. */
+  toy: ToyKind | null;
+  /** A toy waiting for you to click where it should be dropped. */
+  spawning: ToyKind | null;
 
   setHovered: (id: string | null) => void;
   select: (s: Selection) => void;
@@ -75,6 +81,13 @@ interface State {
   goOverhead: () => void;
   /** Fly out of Andy's window to look at the house and neighborhood. */
   goOutside: () => void;
+  startSpawn: (kind: ToyKind) => void;
+  cancelSpawn: () => void;
+  /** Drops the chosen toy at a point in the house or neighborhood and flies to it. */
+  spawnToy: (p: { x: number; y: number; z: number }, facing: number) => void;
+  goToToy: () => void;
+  /** Back from Carpet World: to the toy if one is out, otherwise the room view. */
+  returnHome: () => void;
   setWalk: () => void;
   setDrive: () => void;
   resetPosition: () => void;
@@ -105,6 +118,13 @@ let toastId = 0;
 
 function releasePointer() {
   if (typeof document !== "undefined" && document.pointerLockElement) document.exitPointerLock();
+}
+
+/** Whether rug buildings, roads and the rug itself respond to hover, clicks and double-clicks. */
+export function rugPickable() {
+  const { mode, spawning } = useStore.getState();
+  if (mode === "overhead") return true;
+  return (mode === "room" || mode === "house" || mode === "toy") && !spawning && !runtime.houseShellVisible;
 }
 
 /** A walkable spot for an arbitrary clicked rug position. */
@@ -152,6 +172,8 @@ export const useStore = create<State>((set, get) => {
     navPanelOpen: false,
     mapExpanded: false,
     showHelp: true,
+    toy: null,
+    spawning: null,
 
     setHovered: (id) => set({ hoveredId: id }),
     select: (selection) => set({ selection }),
@@ -173,6 +195,7 @@ export const useStore = create<State>((set, get) => {
       set({
         mode: "transition",
         flight: { id: ++flightId, kind: "enter", pose, next },
+        spawning: null,
         selection: null,
         hoveredId: null,
         interaction: null,
@@ -191,6 +214,7 @@ export const useStore = create<State>((set, get) => {
       set({
         mode: "transition",
         flight: { id: ++flightId, kind: "room" },
+        spawning: null,
         autopilot: false,
         interaction: null,
         interiorId: null,
@@ -204,6 +228,7 @@ export const useStore = create<State>((set, get) => {
       set({
         mode: "transition",
         flight: { id: ++flightId, kind: "overhead" },
+        spawning: null,
         autopilot: false,
         interaction: null,
         interiorId: null,
@@ -217,6 +242,7 @@ export const useStore = create<State>((set, get) => {
       set({
         mode: "transition",
         flight: { id: ++flightId, kind: "house" },
+        spawning: null,
         autopilot: false,
         interaction: null,
         selection: null,
@@ -224,6 +250,36 @@ export const useStore = create<State>((set, get) => {
         navPanelOpen: false,
       });
     },
+
+    startSpawn: (kind) => set({ spawning: kind, selection: null, hoveredId: null, navPanelOpen: false }),
+    cancelSpawn: () => set({ spawning: null }),
+
+    spawnToy: (p, facing) => {
+      const kind = get().spawning;
+      if (!kind) return;
+      Object.assign(runtime.toy, { x: p.x, y: p.y, z: p.z, vy: 0, speed: 0, yaw: facing, camYaw: facing });
+      set({ toy: kind, spawning: null });
+      get().goToToy();
+    },
+
+    goToToy: () => {
+      if (!get().toy) return;
+      releasePointer();
+      set({
+        mode: "transition",
+        flight: { id: ++flightId, kind: "toy" },
+        autopilot: false,
+        interaction: null,
+        interiorId: null,
+        interiorBuildingId: null,
+        selection: null,
+        hoveredId: null,
+        navPanelOpen: false,
+        hud: null,
+      });
+    },
+
+    returnHome: () => (get().toy ? get().goToToy() : get().goToRoom()),
 
     setWalk: () => {
       const { mode } = get();
@@ -301,7 +357,7 @@ export const useStore = create<State>((set, get) => {
       const { mode, destinationId } = get();
       if (!destinationId) return;
       set({ navigating: true, navPanelOpen: false });
-      if (mode === "room" || mode === "overhead") get().enterWorld();
+      if (mode === "room" || mode === "overhead" || mode === "house" || mode === "toy") get().enterWorld();
     },
 
     stopNavigation: () => set({ navigating: false, autopilot: false }),

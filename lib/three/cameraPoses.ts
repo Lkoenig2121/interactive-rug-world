@@ -1,7 +1,18 @@
 import * as THREE from "three";
 import { EXT_Y } from "../house/layout";
 
-export const FOV = { room: 42, overhead: 40, walk: 72, drive: 62, interior: 72, house: 45 } as const;
+export const FOV = { room: 42, overhead: 40, walk: 72, drive: 62, interior: 72, house: 45, toy: 55 } as const;
+
+/** Height of the point the follow camera looks at, above the toy's feet. */
+export const TOY_LOOK_HEIGHT = 26;
+
+/** Third-person camera behind and above the toy. */
+export function toyCameraPose(t: { x: number; y: number; z: number; camYaw: number; camPitch: number; camDist: number }) {
+  const target = new THREE.Vector3(t.x, t.y + TOY_LOOK_HEIGHT, t.z);
+  const flat = Math.cos(t.camPitch) * t.camDist;
+  const pos = new THREE.Vector3(t.x + Math.sin(t.camYaw) * flat, target.y + Math.sin(t.camPitch) * t.camDist, t.z + Math.cos(t.camYaw) * flat);
+  return { pos, target };
+}
 export const EYE_HEIGHT = 1.7;
 
 /** Ground-level height the outside-view controls orbit around. */

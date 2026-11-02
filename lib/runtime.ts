@@ -15,6 +15,10 @@ export const runtime = {
   car: { ...CAR_SPAWN, speed: 0, steer: 0 },
   keys: new Set<string>(),
   lastWorldMode: "walk" as "walk" | "drive",
+  /** The toy you play as, at house scale: feet position, facing, walk cycle and its follow camera. */
+  toy: { x: 0, y: 0, z: 140, yaw: 0, vy: 0, speed: 0, phase: 0, camYaw: 0, camPitch: 0.3, camDist: 110 },
+  /** Whether the outside walls and roof are drawn; the rug can only be picked while they are hidden. */
+  houseShellVisible: false,
 };
 
 export function resetPlayer() {

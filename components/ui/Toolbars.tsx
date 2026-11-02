@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useStore } from "@/lib/store";
+import { useStore, type ToyKind } from "@/lib/store";
 import { Icon, type IconName } from "./Icon";
 import { MiniMap } from "./MiniMap";
 
@@ -50,6 +50,74 @@ function useFullscreen() {
   return [fs, toggle] as const;
 }
 
+const TOYS: { kind: ToyKind; name: string; blurb: string; swatch: string }[] = [
+  { kind: "ranger", name: "Space Ranger", blurb: "Action figure with wings", swatch: "from-slate-100 via-blue-500 to-orange-400" },
+  { kind: "cowboy", name: "Cowboy", blurb: "Pull-string sheriff doll", swatch: "from-amber-600 via-red-600 to-yellow-400" },
+];
+
+/** Pick a toy, then click anywhere in the scene to drop it there. */
+function ToyPicker() {
+  const [open, setOpen] = useState(false);
+  const startSpawn = useStore((s) => s.startSpawn);
+  const current = useStore((s) => s.toy);
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className={`flex items-center gap-2 rounded-xl px-2.5 py-2 text-sm font-semibold transition active:scale-95 ${
+          open ? "bg-blue-600 text-white" : "text-slate-700 hover:bg-slate-900/5"
+        }`}
+      >
+        <Icon name="walk" className="h-5 w-5" />
+        <span className="hidden whitespace-nowrap md:inline">{current ? "Drop a toy" : "Play as a toy"}</span>
+      </button>
+      {open && (
+        <div className="absolute bottom-full left-1/2 mb-3 w-64 -translate-x-1/2 rounded-2xl bg-white/95 p-2 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl animate-[panelIn_.15s_ease-out]">
+          <p className="px-2 pb-2 pt-1 text-xs font-medium text-slate-500">Choose a toy, then click anywhere to drop it in.</p>
+          {TOYS.map((t) => (
+            <button
+              key={t.kind}
+              onClick={() => {
+                setOpen(false);
+                startSpawn(t.kind);
+              }}
+              className="flex w-full items-center gap-3 rounded-xl p-2 text-left transition hover:bg-slate-900/5"
+            >
+              <span className={`h-9 w-9 shrink-0 rounded-lg bg-gradient-to-br ${t.swatch} ring-1 ring-black/10`} />
+              <span className="leading-tight">
+                <span className="block text-sm font-semibold text-slate-900">{t.name}</span>
+                <span className="block text-[11px] text-slate-500">{t.blurb}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Toolbar while playing as a toy. */
+export function ToyToolbar() {
+  const goToRoom = useStore((s) => s.goToRoom);
+  const enterWorld = useStore((s) => s.enterWorld);
+  const [fs, toggleFs] = useFullscreen();
+  return (
+    <div className="pointer-events-auto flex items-center gap-1 rounded-2xl bg-white/85 p-1.5 shadow-2xl shadow-slate-900/20 ring-1 ring-black/5 backdrop-blur-xl">
+      <button
+        onClick={() => enterWorld()}
+        className="flex items-center gap-2 rounded-xl bg-gradient-to-b from-blue-500 to-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition hover:from-blue-400 hover:to-blue-500 active:scale-95"
+      >
+        <Icon name="enter" className="h-5 w-5" />
+        <span className="whitespace-nowrap">Enter Carpet World</span>
+      </button>
+      <span className="mx-1 h-6 w-px bg-slate-300/70" />
+      <ToyPicker />
+      <ToolButton icon="layers" label="Explore view" showLabel onClick={goToRoom} />
+      <ToolButton icon={fs ? "shrink" : "expand"} label="Toggle fullscreen" onClick={toggleFs} />
+    </div>
+  );
+}
+
 /** Minimal toolbar for the room view. */
 export function RoomToolbar() {
   const enterWorld = useStore((s) => s.enterWorld);
@@ -73,6 +141,7 @@ export function RoomToolbar() {
       <ToolButton icon="reset" label="Reset camera" onClick={() => cameraCmd("reset")} />
       <ToolButton icon="nav" label="Directions" active={navOpen} onClick={() => setNavPanelOpen(!navOpen)} />
       <ToolButton icon="home" label="Outside" showLabel onClick={goOutside} />
+      <ToyPicker />
       <ToolButton icon={fs ? "shrink" : "expand"} label="Toggle fullscreen" onClick={toggleFs} />
     </div>
   );
@@ -81,18 +150,21 @@ export function RoomToolbar() {
 /** Toolbar for the outside view of the house and neighborhood. */
 export function HouseToolbar() {
   const goToRoom = useStore((s) => s.goToRoom);
+  const enterWorld = useStore((s) => s.enterWorld);
   const cameraCmd = useStore((s) => s.cameraCmd);
   const [fs, toggleFs] = useFullscreen();
   return (
     <div className="pointer-events-auto flex items-center gap-1 rounded-2xl bg-white/85 p-1.5 shadow-2xl shadow-slate-900/20 ring-1 ring-black/5 backdrop-blur-xl">
       <button
-        onClick={goToRoom}
+        onClick={() => enterWorld()}
         className="flex items-center gap-2 rounded-xl bg-gradient-to-b from-blue-500 to-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition hover:from-blue-400 hover:to-blue-500 active:scale-95"
       >
-        <Icon name="room" className="h-5 w-5" />
-        <span className="whitespace-nowrap">Back to Andy&apos;s room</span>
+        <Icon name="enter" className="h-5 w-5" />
+        <span className="whitespace-nowrap">Drop into Carpet World</span>
       </button>
       <span className="mx-1 h-6 w-px bg-slate-300/70" />
+      <ToolButton icon="room" label="Andy's room" showLabel onClick={goToRoom} />
+      <ToyPicker />
       <ToolButton icon="plus" label="Zoom in" onClick={() => cameraCmd("zoomIn")} />
       <ToolButton icon="minus" label="Zoom out" onClick={() => cameraCmd("zoomOut")} />
       <ToolButton icon="reset" label="Reset camera" onClick={() => cameraCmd("reset")} />
@@ -104,7 +176,8 @@ export function HouseToolbar() {
 /** Corner dock inside Carpet World: minimap plus mode switches. */
 export function WorldDock() {
   const mode = useStore((s) => s.mode);
-  const goToRoom = useStore((s) => s.goToRoom);
+  const goToRoom = useStore((s) => s.returnHome);
+  const hasToy = useStore((s) => s.toy !== null);
   const goOverhead = useStore((s) => s.goOverhead);
   const setWalk = useStore((s) => s.setWalk);
   const setDrive = useStore((s) => s.setDrive);
@@ -138,7 +211,7 @@ export function WorldDock() {
         </div>
       )}
       <div className="flex flex-wrap items-center justify-between gap-0.5 p-1.5">
-        <ToolButton icon="room" label="Room View" onClick={goToRoom} />
+        <ToolButton icon="room" label={hasToy ? "Back to your toy" : "Room View"} onClick={goToRoom} />
         <ToolButton icon="map" label="Overhead Map" onClick={goOverhead} active={mode === "overhead"} />
         <ToolButton icon="walk" label="Walking Mode" onClick={setWalk} active={mode === "walk"} disabled={inInterior} />
         <ToolButton icon="car" label="Driving Mode" onClick={setDrive} active={mode === "drive"} disabled={inInterior} />

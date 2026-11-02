@@ -3,7 +3,7 @@
 import { RoundedBox } from "@react-three/drei";
 import type { ThreeEvent } from "@react-three/fiber";
 import { useMemo } from "react";
-import { useStore } from "@/lib/store";
+import { rugPickable, useStore } from "@/lib/store";
 import { carpetBumpTexture, carpetTexture, rugBorderTexture } from "@/lib/three/textures";
 import { RUG } from "@/lib/world/roads";
 import { CarpetWorld } from "./CarpetWorld";
@@ -46,16 +46,17 @@ export function RugScene() {
   const bump = useTiled(carpetBumpTexture, inner.w / 5, inner.d / 5);
 
   const onClick = (e: ThreeEvent<MouseEvent>) => {
-    const { mode, select } = useStore.getState();
-    if ((mode !== "room" && mode !== "overhead") || e.delta > 5) return;
+    if (!rugPickable() || e.delta > 5) return;
     e.stopPropagation();
-    select({ kind: "location", point: { x: e.point.x, z: e.point.z } });
+    const s = useStore.getState();
+    const point = { x: e.point.x, z: e.point.z };
+    if (s.mode === "toy") s.enterWorld({ at: point });
+    else s.select({ kind: "location", point });
   };
   const onDoubleClick = (e: ThreeEvent<MouseEvent>) => {
-    const { mode, enterWorld } = useStore.getState();
-    if (mode !== "room" && mode !== "overhead") return;
+    if (!rugPickable()) return;
     e.stopPropagation();
-    enterWorld({ at: { x: e.point.x, z: e.point.z } });
+    useStore.getState().enterWorld({ at: { x: e.point.x, z: e.point.z } });
   };
 
   return (

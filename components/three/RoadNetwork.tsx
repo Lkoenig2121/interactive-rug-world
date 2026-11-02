@@ -6,7 +6,7 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { ribbonGeometry } from "@/lib/three/ribbon";
 import { asphaltTexture, concreteTexture } from "@/lib/three/textures";
-import { useStore } from "@/lib/store";
+import { rugPickable, useStore } from "@/lib/store";
 import { pointAtDistance } from "@/lib/world/geometry";
 import {
   nodeById,
@@ -123,11 +123,11 @@ export function RoadNetwork() {
   }, []);
 
   const onRoadClick = (e: ThreeEvent<MouseEvent>, edgeId: string) => {
-    const mode = useStore.getState().mode;
-    if (mode !== "room" && mode !== "overhead") return;
-    if (e.delta > 5) return;
+    if (!rugPickable() || e.delta > 5) return;
     e.stopPropagation();
-    select({ kind: "road", edgeId, point: { x: e.point.x, z: e.point.z } });
+    const point = { x: e.point.x, z: e.point.z };
+    if (useStore.getState().mode === "toy") useStore.getState().enterWorld({ at: point });
+    else select({ kind: "road", edgeId, point });
   };
 
   return (

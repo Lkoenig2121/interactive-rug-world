@@ -126,8 +126,25 @@ export const levelY = (level: Level) => (level === 1 ? UPPER_Y : GROUND_Y);
 
 export const LOT = { width: 2900, centerX: -750 };
 export const STREET = { z0: 1590, z1: 2390, sidewalk: 150, frontYard: 1070 };
+/** Parallel streets of the suburb, the first one in front of Andy's house. */
+export const STREETS = 5;
+export const STREET_SPACING = 7800;
 export const BACK_FENCE_Z = -2400;
 export const HEDGE = { z: -2700, depth: 300, height: 420 };
 
 /** Spot just outside Andy's window, used for the fly-out camera move. */
 export const ANDY_WINDOW = { x: HOUSE.x1, y: UPPER_Y + 172, z: 230 };
+
+export const ANDY_ROOM: Rect = { x0: -450, x1: 450, z0: -260, z1: 520 };
+/** Highest point of the main roof. */
+export const ROOF_TOP_Y = EAVE_Y + 420;
+
+type Point3 = { x: number; y: number; z: number };
+
+export const inRect = (p: { x: number; z: number }, r: Rect, margin = 0) =>
+  p.x >= r.x0 - margin && p.x <= r.x1 + margin && p.z >= r.z0 - margin && p.z <= r.z1 + margin;
+
+/** True when a point is clear of the house walls and roof. */
+export function isOutsideHouse(p: Point3, margin = SHELL + 2) {
+  return !inRect(p, HOUSE, margin) || p.y > ROOF_TOP_Y + margin;
+}

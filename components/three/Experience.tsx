@@ -20,6 +20,9 @@ import { MapLabels } from "./MapLabels";
 import { NavigationSystem } from "./NavigationSystem";
 import { RoomLighting, RoomScene } from "./RoomScene";
 import { RugScene } from "./RugScene";
+import { SpawnPicker } from "./toys/SpawnPicker";
+import { Toy } from "./toys/Toy";
+import { ToyController } from "./toys/ToyController";
 import { WalkingController } from "./WalkingController";
 
 function SceneEnvironment() {
@@ -36,7 +39,7 @@ function SceneEnvironment() {
 
 export default function Experience() {
   const mode = useStore((s) => s.mode);
-  const showHouse = mode === "room" || mode === "house" || mode === "transition";
+  const showHouse = mode === "room" || mode === "house" || mode === "toy" || mode === "transition";
   const initial = useMemo(() => roomCameraPose(typeof window === "undefined" ? 1.6 : window.innerWidth / window.innerHeight), []);
 
   return (
@@ -52,7 +55,7 @@ export default function Experience() {
       }}
       onPointerMissed={() => {
         const s = useStore.getState();
-        if (s.mode === "room" || s.mode === "overhead") s.select(null);
+        if (s.mode === "room" || s.mode === "overhead" || s.mode === "house" || s.mode === "toy") s.select(null);
       }}
     >
       <color attach="background" args={["#cfe3f0"]} />
@@ -75,6 +78,7 @@ export default function Experience() {
           <HouseExterior />
           <Neighborhood />
         </group>
+        <Toy />
       </group>
 
       {mode === "interior" && <InteriorScene />}
@@ -85,6 +89,8 @@ export default function Experience() {
         <WalkingController pose={runtime.player} colliders={worldColliders} findInteraction={worldWalkInteraction} />
       )}
       {mode === "drive" && <DrivingController />}
+      {mode === "toy" && <ToyController />}
+      <SpawnPicker />
     </Canvas>
   );
 }
