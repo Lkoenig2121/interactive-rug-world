@@ -8,7 +8,7 @@ import { ControlsHelp, Crosshair, DirectionsBanner, FadeOverlay, InteractionProm
 import { Icon } from "./Icon";
 import { InfoPanel } from "./InfoPanel";
 import { NavigationPanel } from "./NavigationPanel";
-import { RoomToolbar, WorldDock } from "./Toolbars";
+import { HouseToolbar, RoomToolbar, WorldDock } from "./Toolbars";
 
 const Experience = dynamic(() => import("@/components/three/Experience"), {
   ssr: false,
@@ -49,13 +49,13 @@ function useKeyboard() {
           if (s.mode === "walk" || s.mode === "drive") s.setMapExpanded(!s.mapExpanded);
           break;
         case "KeyN":
-          if (s.mode !== "interior" && s.mode !== "transition") s.setNavPanelOpen(!s.navPanelOpen);
+          if (s.mode !== "interior" && s.mode !== "transition" && s.mode !== "house") s.setNavPanelOpen(!s.navPanelOpen);
           break;
         case "Escape":
           if (s.mode === "walk") s.goOverhead();
           else if (s.mode === "drive") s.setWalk();
           else if (s.mode === "interior") s.exitInterior();
-          else if (s.mode === "overhead") s.goToRoom();
+          else if (s.mode === "overhead" || s.mode === "house") s.goToRoom();
           else if (s.mode === "room") s.select(null);
           break;
       }
@@ -82,6 +82,7 @@ function Brand() {
     walk: "Walking",
     drive: "Driving",
     interior: "Inside",
+    house: "Outside Andy's house",
   };
   return (
     <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-white/85 py-2 pl-2 pr-4 shadow-xl ring-1 ring-black/5 backdrop-blur-xl">
@@ -124,7 +125,7 @@ export function AppShell() {
       {/* Left column: details & navigation */}
       <div className="pointer-events-none absolute left-3 top-20 flex flex-col gap-3 sm:left-4 sm:top-24">
         <InfoPanel />
-        {mode !== "interior" && mode !== "transition" && <NavigationPanel />}
+        {mode !== "interior" && mode !== "transition" && mode !== "house" && <NavigationPanel />}
       </div>
 
       {/* Bottom */}
@@ -137,6 +138,14 @@ export function AppShell() {
               Click a building to inspect it · double-click the rug to jump in
             </p>
             <RoomToolbar />
+          </>
+        )}
+        {mode === "house" && (
+          <>
+            <p className="pointer-events-none hidden rounded-full bg-slate-900/50 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur sm:block">
+              Drag to pan · right-drag to orbit · scroll to zoom · Esc to go back inside
+            </p>
+            <HouseToolbar />
           </>
         )}
       </div>

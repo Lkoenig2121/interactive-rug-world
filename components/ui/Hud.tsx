@@ -163,6 +163,12 @@ const HELP: Record<string, [string, string][]> = {
     ["E", "Park & go inside"],
     ["Esc", "Exit driving mode"],
   ],
+  house: [
+    ["Drag", "Pan around the street"],
+    ["Right-drag", "Orbit & tilt"],
+    ["Scroll", "Zoom"],
+    ["Esc", "Back to Andy's room"],
+  ],
   interior: [
     ["W A S D", "Walk"],
     ["Mouse", "Look around"],

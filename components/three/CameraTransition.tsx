@@ -3,9 +3,15 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
-import { EYE_HEIGHT, easeInOutCubic, FOV, overheadPose, roomCameraPose, smooth } from "@/lib/three/cameraPoses";
+import { ANDY_WINDOW, HOUSE, SHELL } from "@/lib/house/layout";
+import { EYE_HEIGHT, easeInOutCubic, FOV, housePose, overheadPose, roomCameraPose, smooth } from "@/lib/three/cameraPoses";
 import { useStore } from "@/lib/store";
 import { yawToDir } from "@/lib/world/geometry";
+
+function isOutsideHouse(p: THREE.Vector3) {
+  const m = SHELL + 60;
+  return p.x > HOUSE.x1 + m || p.x < HOUSE.x0 - m || p.z > HOUSE.z1 + m || p.z < HOUSE.z0 - m || p.y > 900;
+}
 
 interface Anim {
   curve: THREE.CatmullRomCurve3;
@@ -78,6 +84,41 @@ export function CameraTransition() {
         dur: 3.6,
         t: 0,
       };
+    } else if (flight.kind === "house" || (flight.kind === "room" && isOutsideHouse(p0))) {
+      // Fly through Andy's window: out to the street view, or back in to the room.
+      const w = ANDY_WINDOW;
+      const inside = new THREE.Vector3(w.x - 140, w.y, w.z);
+      const outside = new THREE.Vector3(w.x + 160, w.y + 20, w.z);
+      const yard = new THREE.Vector3(w.x + 1300, w.y + 600, w.z + 1500);
+      if (flight.kind === "house") {
+        const target = housePose(aspect);
+        anim.current = {
+          curve: new THREE.CatmullRomCurve3([p0, inside, outside, yard, target.pos], false, "centripetal"),
+          l0,
+          lMid: new THREE.Vector3(w.x + 2500, w.y - 250, w.z + 300),
+          lEnd: target.target,
+          fov0: camera.fov,
+          fov1: FOV.house,
+          near0: camera.near,
+          near1: 5,
+          dur: 4.6,
+          t: 0,
+        };
+      } else {
+        const target = roomCameraPose(aspect);
+        anim.current = {
+          curve: new THREE.CatmullRomCurve3([p0, yard, outside, inside, target.pos], false, "centripetal"),
+          l0,
+          lMid: new THREE.Vector3(w.x - 600, w.y - 100, w.z),
+          lEnd: target.target,
+          fov0: camera.fov,
+          fov1: FOV.room,
+          near0: camera.near,
+          near1: 0.5,
+          dur: 4.6,
+          t: 0,
+        };
+      }
     } else {
       const target = flight.kind === "room" ? roomCameraPose(aspect) : overheadPose(aspect);
       const lift = new THREE.Vector3(0, Math.max(30, target.pos.y * 0.3), 0);

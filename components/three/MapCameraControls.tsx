@@ -5,7 +5,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useLayoutEffect, useRef } from "react";
 import * as THREE from "three";
 import type { MapControls as MapControlsImpl } from "three-stdlib";
-import { easeInOutCubic, FOV, overheadPose, roomCameraPose } from "@/lib/three/cameraPoses";
+import { easeInOutCubic, FOV, HOUSE_TARGET_Y, housePose, overheadPose, roomCameraPose } from "@/lib/three/cameraPoses";
 import { useStore } from "@/lib/store";
 
 interface Anim {
@@ -20,19 +20,26 @@ interface Anim {
  * Google-Maps style controls: drag to pan, right-drag / two fingers to rotate and tilt, wheel to zoom.
  * Used for the room view and the in-world overhead map.
  */
-export function MapCameraControls({ variant }: { variant: "room" | "overhead" }) {
+const VARIANTS = {
+  room: { min: 18, max: 820, polar: 1.38, near: 0.5, fov: FOV.room, y: 0, bounds: { x: [-260, 260], z: [-200, 280] } },
+  overhead: { min: 25, max: 640, polar: 1.2, near: 0.5, fov: FOV.overhead, y: 0, bounds: { x: [-260, 260], z: [-200, 280] } },
+  house: { min: 700, max: 16000, polar: 1.48, near: 5, fov: FOV.house, y: HOUSE_TARGET_Y, bounds: { x: [-9000, 9000], z: [-7000, 12000] } },
+} as const;
+
+export function MapCameraControls({ variant }: { variant: keyof typeof VARIANTS }) {
   const ref = useRef<MapControlsImpl>(null);
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const size = useThree((s) => s.size);
   const cmd = useStore((s) => s.cameraCommand);
   const handled = useRef(cmd?.id ?? 0);
   const anim = useRef<Anim | null>(null);
-  const minDistance = variant === "room" ? 18 : 25;
-  const maxDistance = variant === "room" ? 820 : 640;
+  const cfg = VARIANTS[variant];
+  const minDistance = cfg.min;
+  const maxDistance = cfg.max;
 
   const pose = () => {
     const aspect = size.width / Math.max(1, size.height);
-    return variant === "room" ? roomCameraPose(aspect) : overheadPose(aspect);
+    return variant === "room" ? roomCameraPose(aspect) : variant === "house" ? housePose(aspect) : overheadPose(aspect);
   };
 
   useLayoutEffect(() => {
@@ -41,11 +48,11 @@ export function MapCameraControls({ variant }: { variant: "room" | "overhead" })
     // Aim at the point the camera is already looking at so mounting causes no jump.
     const dir = new THREE.Vector3();
     camera.getWorldDirection(dir);
-    const t = dir.y < -0.05 ? -camera.position.y / dir.y : 100;
+    const t = dir.y < -0.05 ? (cfg.y - camera.position.y) / dir.y : 100;
     c.target.copy(camera.position).addScaledVector(dir, t);
-    c.target.y = 0;
-    camera.fov = variant === "room" ? FOV.room : FOV.overhead;
-    camera.near = 0.5;
+    c.target.y = cfg.y;
+    camera.fov = cfg.fov;
+    camera.near = cfg.near;
     camera.updateProjectionMatrix();
     c.update();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -86,9 +93,9 @@ export function MapCameraControls({ variant }: { variant: "room" | "overhead" })
       c.update();
       if (a.t >= 1) anim.current = null;
     }
-    c.target.x = THREE.MathUtils.clamp(c.target.x, -260, 260);
-    c.target.z = THREE.MathUtils.clamp(c.target.z, -200, 280);
-    c.target.y = 0;
+    c.target.x = THREE.MathUtils.clamp(c.target.x, cfg.bounds.x[0], cfg.bounds.x[1]);
+    c.target.z = THREE.MathUtils.clamp(c.target.z, cfg.bounds.z[0], cfg.bounds.z[1]);
+    c.target.y = cfg.y;
   });
 
   return (
@@ -99,7 +106,7 @@ export function MapCameraControls({ variant }: { variant: "room" | "overhead" })
       dampingFactor={0.09}
       minDistance={minDistance}
       maxDistance={maxDistance}
-      maxPolarAngle={variant === "room" ? 1.38 : 1.2}
+      maxPolarAngle={cfg.polar}
       screenSpacePanning={false}
       zoomSpeed={0.9}
       panSpeed={1.1}

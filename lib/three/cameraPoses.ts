@@ -1,7 +1,20 @@
 import * as THREE from "three";
+import { EXT_Y } from "../house/layout";
 
-export const FOV = { room: 42, overhead: 40, walk: 72, drive: 62, interior: 72 } as const;
+export const FOV = { room: 42, overhead: 40, walk: 72, drive: 62, interior: 72, house: 45 } as const;
 export const EYE_HEIGHT = 1.7;
+
+/** Ground-level height the outside-view controls orbit around. */
+export const HOUSE_TARGET_Y = EXT_Y + 300;
+
+/** Street-side view of Andy's house in its neighborhood. */
+export function housePose(aspect: number) {
+  const target = new THREE.Vector3(-650, HOUSE_TARGET_Y, -150);
+  const base = new THREE.Vector3(2300, EXT_Y + 1500, 3900);
+  const k = THREE.MathUtils.clamp(1.6 / aspect, 1, 2);
+  const pos = target.clone().add(base.sub(target).multiplyScalar(k));
+  return { pos, target };
+}
 
 /** Photo-like view of the rug from the front of the room, looking toward the windows. */
 export function roomCameraPose(aspect: number) {

@@ -56,6 +56,7 @@ export function RoomToolbar() {
   const cameraCmd = useStore((s) => s.cameraCmd);
   const setNavPanelOpen = useStore((s) => s.setNavPanelOpen);
   const navOpen = useStore((s) => s.navPanelOpen);
+  const goOutside = useStore((s) => s.goOutside);
   const [fs, toggleFs] = useFullscreen();
   return (
     <div className="pointer-events-auto flex items-center gap-1 rounded-2xl bg-white/85 p-1.5 shadow-2xl shadow-slate-900/20 ring-1 ring-black/5 backdrop-blur-xl">
@@ -71,6 +72,30 @@ export function RoomToolbar() {
       <ToolButton icon="minus" label="Zoom out" onClick={() => cameraCmd("zoomOut")} />
       <ToolButton icon="reset" label="Reset camera" onClick={() => cameraCmd("reset")} />
       <ToolButton icon="nav" label="Directions" active={navOpen} onClick={() => setNavPanelOpen(!navOpen)} />
+      <ToolButton icon="home" label="Outside" showLabel onClick={goOutside} />
+      <ToolButton icon={fs ? "shrink" : "expand"} label="Toggle fullscreen" onClick={toggleFs} />
+    </div>
+  );
+}
+
+/** Toolbar for the outside view of the house and neighborhood. */
+export function HouseToolbar() {
+  const goToRoom = useStore((s) => s.goToRoom);
+  const cameraCmd = useStore((s) => s.cameraCmd);
+  const [fs, toggleFs] = useFullscreen();
+  return (
+    <div className="pointer-events-auto flex items-center gap-1 rounded-2xl bg-white/85 p-1.5 shadow-2xl shadow-slate-900/20 ring-1 ring-black/5 backdrop-blur-xl">
+      <button
+        onClick={goToRoom}
+        className="flex items-center gap-2 rounded-xl bg-gradient-to-b from-blue-500 to-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition hover:from-blue-400 hover:to-blue-500 active:scale-95"
+      >
+        <Icon name="room" className="h-5 w-5" />
+        <span className="whitespace-nowrap">Back to Andy&apos;s room</span>
+      </button>
+      <span className="mx-1 h-6 w-px bg-slate-300/70" />
+      <ToolButton icon="plus" label="Zoom in" onClick={() => cameraCmd("zoomIn")} />
+      <ToolButton icon="minus" label="Zoom out" onClick={() => cameraCmd("zoomOut")} />
+      <ToolButton icon="reset" label="Reset camera" onClick={() => cameraCmd("reset")} />
       <ToolButton icon={fs ? "shrink" : "expand"} label="Toggle fullscreen" onClick={toggleFs} />
     </div>
   );

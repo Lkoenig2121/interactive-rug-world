@@ -37,17 +37,17 @@ function noise(ctx: CanvasRenderingContext2D, w: number, h: number, count: numbe
 }
 
 export function woodFloorTexture() {
-  return makeTexture("wood", 1024, 1024, (ctx, w, h) => {
+  return makeTexture("wood-v2", 1024, 1024, (ctx, w, h) => {
     const rand = seededRandom(7);
-    const rows = 8;
+    const rows = 14;
     const rowH = h / rows;
     for (let r = 0; r < rows; r++) {
-      let x = -rand() * 400;
+      let x = -rand() * 500;
       while (x < w) {
-        const len = 380 + rand() * 420;
-        const hue = 27 + rand() * 8;
-        const light = 42 + rand() * 12;
-        ctx.fillStyle = `hsl(${hue}, ${48 + rand() * 10}%, ${light}%)`;
+        const len = 420 + rand() * 520;
+        const hue = 19 + rand() * 9;
+        const light = 40 + rand() * 9;
+        ctx.fillStyle = `hsl(${hue}, ${58 + rand() * 12}%, ${light}%)`;
         ctx.fillRect(x, r * rowH, len, rowH);
         // Grain
         for (let g = 0; g < 26; g++) {
@@ -477,7 +477,7 @@ export function cowboyPosterTexture() {
     ctx.textBaseline = "middle";
     ctx.fillStyle = "#c62f2a";
     ctx.font = "900 34px 'Arial Black', 'Helvetica Neue', Arial, sans-serif";
-    ctx.fillText("ABC", w / 2, 50);
+    ctx.fillText("RODEO", w / 2, 50);
     ctx.font = "900 58px 'Arial Black', 'Helvetica Neue', Arial, sans-serif";
     ctx.lineWidth = 8;
     ctx.strokeStyle = "#1e3a8a";
@@ -508,18 +508,148 @@ export function globeTexture() {
   });
 }
 
-/** The classic yellow ball with a blue band and a red star. */
+/** Bouncy toy ball: red and white segments with small yellow stars. */
 export function starBallTexture() {
-  return makeTexture("star-ball", 512, 256, (ctx, w, h) => {
-    ctx.fillStyle = "#ffcf2e";
-    ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = "#1f5fbf";
-    ctx.fillRect(0, h * 0.44, w, h * 0.14);
-    for (const x of [w * 0.25, w * 0.75]) {
-      drawStar(ctx, x, h * 0.25, 30, 0, 0.42);
-      ctx.fillStyle = "#e3262d";
+  return makeTexture("star-ball-v2", 512, 256, (ctx, w, h) => {
+    const segments = 6;
+    for (let i = 0; i < segments; i++) {
+      ctx.fillStyle = i % 2 ? "#f8fafc" : "#dc2626";
+      ctx.fillRect((i * w) / segments, 0, w / segments, h);
+    }
+    for (let i = 0; i < segments; i += 2) {
+      drawStar(ctx, ((i + 0.5) * w) / segments, h * 0.5, 16, 0, 0.45);
+      ctx.fillStyle = "#facc15";
       ctx.fill();
     }
+  });
+}
+
+/** White horizontal lap siding; tint with the material color. */
+export function sidingTexture() {
+  return makeTexture("siding", 256, 256, (ctx, w, h) => {
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, w, h);
+    const rows = 10;
+    for (let i = 0; i < rows; i++) {
+      const y = (i * h) / rows;
+      const g = ctx.createLinearGradient(0, y, 0, y + h / rows);
+      g.addColorStop(0, "rgba(0,0,0,0.16)");
+      g.addColorStop(0.18, "rgba(0,0,0,0.02)");
+      g.addColorStop(1, "rgba(0,0,0,0.06)");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, y, w, h / rows);
+    }
+    noise(ctx, w, h, 4000, 0.05, 23);
+  });
+}
+
+export function grassTexture() {
+  return makeTexture("grass", 512, 512, (ctx, w, h) => {
+    ctx.fillStyle = "#5d9a3a";
+    ctx.fillRect(0, 0, w, h);
+    const rand = seededRandom(77);
+    for (let i = 0; i < 24000; i++) {
+      const x = rand() * w;
+      const y = rand() * h;
+      ctx.strokeStyle = `hsla(${88 + rand() * 22}, ${45 + rand() * 20}%, ${30 + rand() * 22}%, ${0.35 + rand() * 0.4})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + (rand() - 0.5) * 2, y - 2 - rand() * 4);
+      ctx.stroke();
+    }
+  });
+}
+
+export function hedgeTexture() {
+  return makeTexture("hedge", 256, 256, (ctx, w, h) => {
+    ctx.fillStyle = "#2f5e24";
+    ctx.fillRect(0, 0, w, h);
+    const rand = seededRandom(808);
+    for (let i = 0; i < 2600; i++) {
+      ctx.fillStyle = `hsla(${92 + rand() * 25}, ${40 + rand() * 25}%, ${18 + rand() * 26}%, 0.85)`;
+      ctx.beginPath();
+      ctx.ellipse(rand() * w, rand() * h, 2 + rand() * 4, 1 + rand() * 2.5, rand() * 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+export function fenceTexture() {
+  return makeTexture("fence", 256, 128, (ctx, w, h) => {
+    ctx.fillStyle = "#c79a6a";
+    ctx.fillRect(0, 0, w, h);
+    const boards = 8;
+    const rand = seededRandom(31);
+    for (let i = 0; i < boards; i++) {
+      const x = (i * w) / boards;
+      ctx.fillStyle = `hsl(${28 + rand() * 6}, ${35 + rand() * 10}%, ${55 + rand() * 10}%)`;
+      ctx.fillRect(x + 1, 0, w / boards - 2, h);
+      ctx.fillStyle = "rgba(60,35,15,0.45)";
+      ctx.fillRect(x, 0, 1.5, h);
+    }
+    ctx.fillStyle = "rgba(60,35,15,0.25)";
+    ctx.fillRect(0, h * 0.18, w, 3);
+    ctx.fillRect(0, h * 0.8, w, 3);
+    noise(ctx, w, h, 3000, 0.1, 5);
+  });
+}
+
+export function garageDoorTexture() {
+  return makeTexture("garage-door", 512, 256, (ctx, w, h) => {
+    ctx.fillStyle = "#f4f2ec";
+    ctx.fillRect(0, 0, w, h);
+    const rows = 4;
+    const cols = 8;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const x = (c * w) / cols + 6;
+        const y = (r * h) / rows + 6;
+        const pw = w / cols - 12;
+        const ph = h / rows - 12;
+        if (r === 0) {
+          ctx.fillStyle = "#3d5a73";
+          ctx.fillRect(x + 4, y + 6, pw - 8, ph - 12);
+        } else {
+          ctx.strokeStyle = "rgba(0,0,0,0.16)";
+          ctx.lineWidth = 3;
+          ctx.strokeRect(x, y, pw, ph);
+        }
+      }
+      ctx.fillStyle = "rgba(0,0,0,0.2)";
+      ctx.fillRect(0, ((r + 1) * h) / rows - 2, w, 3);
+    }
+  });
+}
+
+/** Front of a neighbor's two-storey house: windows with shutters on lap siding (white, tinted per house). */
+export function facadeTexture() {
+  return makeTexture("facade", 512, 512, (ctx, w, h) => {
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, w, h);
+    for (let i = 0; i < 26; i++) {
+      ctx.fillStyle = "rgba(0,0,0,0.07)";
+      ctx.fillRect(0, (i * h) / 26, w, 2);
+    }
+    const window = (cx: number, cy: number, ww: number, wh: number) => {
+      ctx.fillStyle = "#4b5563";
+      ctx.fillRect(cx - ww / 2 - 16, cy - wh / 2, 12, wh);
+      ctx.fillRect(cx + ww / 2 + 4, cy - wh / 2, 12, wh);
+      ctx.fillStyle = "#fbfbf8";
+      ctx.fillRect(cx - ww / 2 - 4, cy - wh / 2 - 4, ww + 8, wh + 8);
+      const g = ctx.createLinearGradient(cx, cy - wh / 2, cx, cy + wh / 2);
+      g.addColorStop(0, "#5b7a94");
+      g.addColorStop(1, "#24384a");
+      ctx.fillStyle = g;
+      ctx.fillRect(cx - ww / 2, cy - wh / 2, ww, wh);
+      ctx.fillStyle = "#fbfbf8";
+      ctx.fillRect(cx - 2, cy - wh / 2, 4, wh);
+      ctx.fillRect(cx - ww / 2, cy - 2, ww, 4);
+    };
+    for (const x of [0.16, 0.39, 0.62, 0.85]) window(x * w, h * 0.26, 50, 70);
+    for (const x of [0.16, 0.62, 0.85]) window(x * w, h * 0.7, 56, 80);
+    ctx.fillStyle = "rgba(0,0,0,0.1)";
+    ctx.fillRect(0, h * 0.47, w, 6);
   });
 }
 

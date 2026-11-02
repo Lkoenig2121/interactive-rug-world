@@ -8,7 +8,7 @@ import { findRoute, projectToNetwork } from "./world/pathfinding";
 import { ROAD_CLEARANCE } from "./world/roads";
 import type { InteriorId, ManeuverType, Pose, Route, Vec2 } from "./world/types";
 
-export type Mode = "room" | "transition" | "overhead" | "walk" | "drive" | "interior";
+export type Mode = "room" | "transition" | "overhead" | "walk" | "drive" | "interior" | "house";
 export type WorldMode = "walk" | "drive";
 
 export type Selection =
@@ -20,7 +20,8 @@ export type Selection =
 export type Flight =
   | { id: number; kind: "enter"; pose: Pose; next: WorldMode }
   | { id: number; kind: "room" }
-  | { id: number; kind: "overhead" };
+  | { id: number; kind: "overhead" }
+  | { id: number; kind: "house" };
 
 export interface CameraCommand {
   id: number;
@@ -72,6 +73,8 @@ interface State {
   completeFlight: () => void;
   goToRoom: () => void;
   goOverhead: () => void;
+  /** Fly out of Andy's window to look at the house and neighborhood. */
+  goOutside: () => void;
   setWalk: () => void;
   setDrive: () => void;
   resetPosition: () => void;
@@ -206,6 +209,19 @@ export const useStore = create<State>((set, get) => {
         interiorId: null,
         interiorBuildingId: null,
         selection: null,
+      });
+    },
+
+    goOutside: () => {
+      releasePointer();
+      set({
+        mode: "transition",
+        flight: { id: ++flightId, kind: "house" },
+        autopilot: false,
+        interaction: null,
+        selection: null,
+        hoveredId: null,
+        navPanelOpen: false,
       });
     },
 

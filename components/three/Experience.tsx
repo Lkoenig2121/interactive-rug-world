@@ -11,6 +11,9 @@ import { useStore } from "@/lib/store";
 import { worldColliders } from "@/lib/world/colliders";
 import { CameraTransition } from "./CameraTransition";
 import { DrivingController } from "./DrivingController";
+import { HouseExterior } from "./house/HouseExterior";
+import { HouseInterior } from "./house/HouseInterior";
+import { Neighborhood, Sky } from "./house/Neighborhood";
 import { InteriorScene } from "./InteriorScene";
 import { MapCameraControls } from "./MapCameraControls";
 import { MapLabels } from "./MapLabels";
@@ -33,6 +36,7 @@ function SceneEnvironment() {
 
 export default function Experience() {
   const mode = useStore((s) => s.mode);
+  const showHouse = mode === "room" || mode === "house" || mode === "transition";
   const initial = useMemo(() => roomCameraPose(typeof window === "undefined" ? 1.6 : window.innerWidth / window.innerHeight), []);
 
   return (
@@ -40,7 +44,7 @@ export default function Experience() {
       shadows
       dpr={[1, 2]}
       gl={{ antialias: true, powerPreference: "high-performance" }}
-      camera={{ fov: 42, near: 0.5, far: 5000, position: initial.pos.toArray() as [number, number, number] }}
+      camera={{ fov: 42, near: 0.5, far: 120000, position: initial.pos.toArray() as [number, number, number] }}
       onCreated={({ camera, gl }) => {
         camera.lookAt(initial.target);
         gl.toneMapping = THREE.ACESFilmicToneMapping;
@@ -51,7 +55,8 @@ export default function Experience() {
         if (s.mode === "room" || s.mode === "overhead") s.select(null);
       }}
     >
-      <color attach="background" args={["#d8cdbd"]} />
+      <color attach="background" args={["#cfe3f0"]} />
+      <fog attach="fog" args={["#d9e9f3", 4000, 42000]} />
       <AdaptiveDpr pixelated={false} />
       <Suspense fallback={null}>
         <SceneEnvironment />
@@ -63,12 +68,19 @@ export default function Experience() {
         <RugScene />
         <NavigationSystem />
         <MapLabels />
+        {/* The rest of the house and the suburb are only drawn when they can be seen. */}
+        <group visible={showHouse}>
+          <Sky />
+          <HouseInterior />
+          <HouseExterior />
+          <Neighborhood />
+        </group>
       </group>
 
       {mode === "interior" && <InteriorScene />}
 
       <CameraTransition />
-      {(mode === "room" || mode === "overhead") && <MapCameraControls key={mode} variant={mode} />}
+      {(mode === "room" || mode === "overhead" || mode === "house") && <MapCameraControls key={mode} variant={mode} />}
       {mode === "walk" && (
         <WalkingController pose={runtime.player} colliders={worldColliders} findInteraction={worldWalkInteraction} />
       )}

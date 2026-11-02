@@ -8,7 +8,6 @@ import {
   cowboyPosterTexture,
   globeTexture,
   labelTexture,
-  skyTexture,
   spaceBedspreadTexture,
   starBallTexture,
   starWallpaperTexture,
@@ -47,15 +46,8 @@ const BACK_DOORS = [
 ];
 const DOOR_H = 212;
 const RIGHT_WINDOW: Opening = { u: 100, w: 150, bottom: FLOOR_Y + 95, top: FLOOR_Y + 250 };
-
-function useRepeated(tex: THREE.Texture, rx: number, ry: number) {
-  return useMemo(() => {
-    const t = tex.clone();
-    t.repeat.set(rx, ry);
-    t.needsUpdate = true;
-    return t;
-  }, [tex, rx, ry]);
-}
+/** Front wall windows; the front wall faces -z so its local x runs along world -x. */
+const FRONT_WINDOWS: Opening[] = [-200, 200].map((x) => ({ u: -x, w: 120, bottom: FLOOR_Y + 95, top: FLOOR_Y + 245 }));
 
 function wallPanelGeometry(u0: number, u1: number, y0: number, y1: number) {
   const g = new THREE.PlaneGeometry(u1 - u0, y1 - y0);
@@ -102,11 +94,12 @@ function Wall({ length, openings = [], position, rotation = 0 }: { length: numbe
 function Floor() {
   const w = ROOM.maxX - ROOM.minX;
   const d = ROOM.maxZ - ROOM.minZ;
-  const map = useRepeated(woodFloorTexture(), w / 170, d / 170);
+  const map = woodFloorTexture();
+  map.repeat.set(w / 220, d / 220);
   return (
     <mesh rotation-x={-Math.PI / 2} position={[0, FLOOR_Y, ROOM_CZ]} receiveShadow>
       <planeGeometry args={[w, d]} />
-      <meshStandardMaterial map={map} roughness={0.32} metalness={0.02} envMapIntensity={0.9} />
+      <meshStandardMaterial map={map} color="#ffffff" roughness={0.38} metalness={0} envMapIntensity={0.6} />
     </mesh>
   );
 }
@@ -127,7 +120,12 @@ function Walls() {
         <Window {...RIGHT_WINDOW} />
       </group>
       <Wall length={d} openings={rightOpenings} position={[ROOM.maxX, 0, ROOM_CZ]} rotation={-Math.PI / 2} />
-      <Wall length={w} position={[0, 0, ROOM.maxZ]} rotation={Math.PI} />
+      <group position={[0, 0, ROOM.maxZ]} rotation-y={Math.PI}>
+        {FRONT_WINDOWS.map((o) => (
+          <Window key={o.u} {...o} />
+        ))}
+      </group>
+      <Wall length={w} openings={FRONT_WINDOWS} position={[0, 0, ROOM.maxZ]} rotation={Math.PI} />
       <mesh position={[0, CEILING_Y, ROOM_CZ]} rotation-x={Math.PI / 2}>
         <planeGeometry args={[w, d]} />
         <meshStandardMaterial color="#d6ecfa" roughness={1} />
@@ -136,18 +134,20 @@ function Walls() {
   );
 }
 
-/** Window in wall-local space; the sky sits just outside the wall. */
+/** Window in wall-local space, looking out onto the real neighborhood. */
 function Window({ u, w, bottom, top }: Opening) {
-  const sky = skyTexture();
   const h = top - bottom;
   const cy = (top + bottom) / 2;
   const frame = <meshStandardMaterial color={WHITE_TRIM} roughness={0.5} />;
   return (
     <group position-x={u}>
-      <mesh position={[0, cy, -8]}>
-        <planeGeometry args={[w + 20, h + 20]} />
-        <meshBasicMaterial map={sky} toneMapped={false} />
-      </mesh>
+      {/* Jambs spanning the wall thickness */}
+      {[-1, 1].map((s) => (
+        <mesh key={`j${s}`} position={[s * (w / 2), cy, -3]} rotation-y={Math.PI / 2}>
+          <planeGeometry args={[8, h]} />
+          <meshStandardMaterial color={WHITE_TRIM} roughness={0.6} side={THREE.DoubleSide} />
+        </mesh>
+      ))}
       <mesh position={[0, cy, -2]}>
         <planeGeometry args={[w, h]} />
         <meshPhysicalMaterial color="#ffffff" transparent opacity={0.1} roughness={0.05} />
@@ -204,13 +204,6 @@ function Door({ u, w, open }: { u: number; w: number; open: number }) {
         <boxGeometry args={[w + 16, 8, 3]} />
         {white}
       </mesh>
-      {open !== 0 && (
-        // Dim hallway beyond the open door
-        <mesh position={[0, DOOR_H / 2, -45]}>
-          <boxGeometry args={[w, DOOR_H, 90]} />
-          <meshStandardMaterial color="#5f7a96" roughness={1} side={THREE.BackSide} />
-        </mesh>
-      )}
       <group position={[-leafW / 2, 0, 2]} rotation-y={open}>
         <mesh position={[leafW / 2, leafH / 2, 0]} castShadow receiveShadow>
           <boxGeometry args={[leafW, leafH, 4]} />
