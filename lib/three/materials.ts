@@ -42,7 +42,7 @@ export function mat(color: string, opts: MatOptions = {}): THREE.MeshStandardMat
     roughness: opts.roughness ?? 0.75,
     metalness: opts.metalness ?? 0,
     map: opts.map ? mapFor(opts.map) : null,
-    emissive: opts.emissive ? new THREE.Color(opts.emissive) : undefined,
+    emissive: new THREE.Color(opts.emissive ?? "#000000"),
     emissiveIntensity: opts.emissiveIntensity ?? 1,
     transparent: opts.transparent ?? false,
     opacity: opts.opacity ?? 1,

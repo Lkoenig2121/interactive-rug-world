@@ -297,6 +297,232 @@ export function marbleTexture() {
   });
 }
 
+function drawStar(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, rot = 0, inner = 0.45) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = rot - Math.PI / 2 + (i * Math.PI) / 5;
+    const rr = i % 2 ? r * inner : r;
+    ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+  }
+  ctx.closePath();
+}
+
+/** Sky-blue wallpaper with scattered yellow stars; tiles seamlessly. */
+export function starWallpaperTexture() {
+  return makeTexture("star-wallpaper", 512, 512, (ctx, w, h) => {
+    ctx.fillStyle = "#79c1ea";
+    ctx.fillRect(0, 0, w, h);
+    noise(ctx, w, h, 9000, 0.05, 61, 2);
+    const rand = seededRandom(404);
+    const stars = Array.from({ length: 9 }, (_, i) => ({
+      x: ((i % 3) + 0.2 + rand() * 0.6) * (w / 3),
+      y: (Math.floor(i / 3) + 0.2 + rand() * 0.6) * (h / 3),
+      r: 15 + rand() * 17,
+      rot: rand() * Math.PI,
+    }));
+    for (const s of stars) {
+      for (const ox of [-w, 0, w]) {
+        for (const oy of [-h, 0, h]) {
+          drawStar(ctx, s.x + ox, s.y + oy, s.r, s.rot);
+          ctx.fillStyle = "#f8c935";
+          ctx.fill();
+          ctx.strokeStyle = "rgba(214,150,24,0.55)";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      }
+    }
+  });
+}
+
+/** Kid's space-ranger bedspread: rockets, planets and stars on deep blue. */
+export function spaceBedspreadTexture() {
+  return makeTexture("space-bedspread", 512, 512, (ctx, w, h) => {
+    ctx.fillStyle = "#1f4fb8";
+    ctx.fillRect(0, 0, w, h);
+    const rand = seededRandom(1995);
+    for (let i = 0; i < 46; i++) {
+      drawStar(ctx, rand() * w, rand() * h, 5 + rand() * 9, rand() * 3);
+      ctx.fillStyle = "#ffd84a";
+      ctx.fill();
+    }
+    const rocket = (x: number, y: number, rot: number, s: number) => {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rot);
+      ctx.scale(s, s);
+      ctx.fillStyle = "#ffb000";
+      ctx.beginPath();
+      ctx.moveTo(-9, 34);
+      ctx.lineTo(0, 62);
+      ctx.lineTo(9, 34);
+      ctx.fill();
+      ctx.fillStyle = "#e3262d";
+      ctx.beginPath();
+      ctx.moveTo(-14, 36);
+      ctx.lineTo(-26, 44);
+      ctx.lineTo(-14, 14);
+      ctx.moveTo(14, 36);
+      ctx.lineTo(26, 44);
+      ctx.lineTo(14, 14);
+      ctx.fill();
+      ctx.fillStyle = "#f4f4f4";
+      ctx.beginPath();
+      ctx.moveTo(0, -40);
+      ctx.quadraticCurveTo(18, -14, 14, 36);
+      ctx.lineTo(-14, 36);
+      ctx.quadraticCurveTo(-18, -14, 0, -40);
+      ctx.fill();
+      ctx.fillStyle = "#e3262d";
+      ctx.beginPath();
+      ctx.moveTo(0, -40);
+      ctx.quadraticCurveTo(10, -26, 12, -16);
+      ctx.lineTo(-12, -16);
+      ctx.quadraticCurveTo(-10, -26, 0, -40);
+      ctx.fill();
+      ctx.fillStyle = "#4cc3ff";
+      ctx.strokeStyle = "#1f2937";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 4, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    };
+    const planet = (x: number, y: number, r: number, color: string, ring: boolean) => {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "rgba(0,0,0,0.18)";
+      ctx.beginPath();
+      ctx.arc(x + r * 0.3, y + r * 0.25, r * 0.75, 0, Math.PI * 2);
+      ctx.fill();
+      if (ring) {
+        ctx.strokeStyle = "#a6e05a";
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.ellipse(x, y, r * 1.7, r * 0.45, -0.35, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    };
+    planet(120, 110, 34, "#7ac943", true);
+    planet(400, 360, 26, "#9b5de5", false);
+    planet(380, 90, 20, "#ff7a3d", true);
+    planet(110, 420, 22, "#38bdf8", false);
+    rocket(260, 230, 0.5, 1.6);
+    rocket(420, 200, -0.4, 0.9);
+    rocket(150, 280, -0.9, 0.85);
+    rocket(300, 440, 0.2, 0.8);
+    ctx.strokeStyle = "#7ac943";
+    ctx.lineWidth = 20;
+    ctx.strokeRect(10, 10, w - 20, h - 20);
+    ctx.strokeStyle = "#7f3fbf";
+    ctx.lineWidth = 6;
+    ctx.strokeRect(26, 26, w - 52, h - 52);
+  });
+}
+
+/** "Round-Up" cowboy-show poster. */
+export function cowboyPosterTexture() {
+  return makeTexture("cowboy-poster", 384, 512, (ctx, w, h) => {
+    ctx.fillStyle = "#c62f2a";
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = "#f5e3b5";
+    ctx.fillRect(16, 16, w - 32, h - 32);
+    const sky = ctx.createLinearGradient(0, 120, 0, h - 40);
+    sky.addColorStop(0, "#4fb3e8");
+    sky.addColorStop(1, "#f6d27a");
+    ctx.fillStyle = sky;
+    ctx.fillRect(30, 130, w - 60, h - 190);
+    ctx.fillStyle = "#c98a3e";
+    ctx.beginPath();
+    ctx.moveTo(30, h - 60);
+    ctx.lineTo(110, h - 170);
+    ctx.lineTo(170, h - 120);
+    ctx.lineTo(250, h - 200);
+    ctx.lineTo(w - 30, h - 110);
+    ctx.lineTo(w - 30, h - 60);
+    ctx.fill();
+    // Hat
+    ctx.fillStyle = "#7b4a24";
+    ctx.beginPath();
+    ctx.ellipse(w / 2, 300, 120, 26, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#94592b";
+    ctx.beginPath();
+    ctx.moveTo(w / 2 - 70, 300);
+    ctx.quadraticCurveTo(w / 2 - 80, 200, w / 2 - 30, 210);
+    ctx.quadraticCurveTo(w / 2, 230, w / 2 + 30, 210);
+    ctx.quadraticCurveTo(w / 2 + 80, 200, w / 2 + 70, 300);
+    ctx.fill();
+    ctx.fillStyle = "#c62f2a";
+    ctx.fillRect(w / 2 - 68, 274, 136, 14);
+    // Lasso
+    ctx.strokeStyle = "#e9c46a";
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.ellipse(w / 2, 390, 110, 30, 0.1, 0, Math.PI * 2);
+    ctx.stroke();
+    for (const [x, y, r] of [
+      [70, 170, 18],
+      [w - 70, 175, 14],
+      [w - 90, 420, 12],
+    ]) {
+      drawStar(ctx, x, y, r);
+      ctx.fillStyle = "#ffd23f";
+      ctx.fill();
+    }
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#c62f2a";
+    ctx.font = "900 34px 'Arial Black', 'Helvetica Neue', Arial, sans-serif";
+    ctx.fillText("ABC", w / 2, 50);
+    ctx.font = "900 58px 'Arial Black', 'Helvetica Neue', Arial, sans-serif";
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = "#1e3a8a";
+    ctx.strokeText("ROUND-UP", w / 2, 98);
+    ctx.fillStyle = "#ffd23f";
+    ctx.fillText("ROUND-UP", w / 2, 98);
+  });
+}
+
+export function globeTexture() {
+  return makeTexture("globe", 512, 256, (ctx, w, h) => {
+    ctx.fillStyle = "#2f7fd1";
+    ctx.fillRect(0, 0, w, h);
+    const rand = seededRandom(3);
+    for (let c = 0; c < 9; c++) {
+      const cx = rand() * w;
+      const cy = h * (0.2 + rand() * 0.6);
+      ctx.fillStyle = c % 3 ? "#58a84a" : "#d9b864";
+      for (let i = 0; i < 14; i++) {
+        ctx.beginPath();
+        ctx.ellipse(cx + (rand() - 0.5) * 70, cy + (rand() - 0.5) * 50, 10 + rand() * 22, 8 + rand() * 16, rand() * 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.fillStyle = "#f4f7fb";
+    ctx.fillRect(0, 0, w, 12);
+    ctx.fillRect(0, h - 12, w, 12);
+  });
+}
+
+/** The classic yellow ball with a blue band and a red star. */
+export function starBallTexture() {
+  return makeTexture("star-ball", 512, 256, (ctx, w, h) => {
+    ctx.fillStyle = "#ffcf2e";
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = "#1f5fbf";
+    ctx.fillRect(0, h * 0.44, w, h * 0.14);
+    for (const x of [w * 0.25, w * 0.75]) {
+      drawStar(ctx, x, h * 0.25, 30, 0, 0.42);
+      ctx.fillStyle = "#e3262d";
+      ctx.fill();
+    }
+  });
+}
+
 export interface LabelOptions {
   bg?: string;
   fg?: string;
