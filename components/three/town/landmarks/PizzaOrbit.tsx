@@ -221,7 +221,7 @@ function LaunchRocket({ l }: { l: Landmark }) {
   });
   return (
     <group ref={ref} position={[rx, 0, rz]}>
-      <Built deps={["launch-rocket"]} build={(b) => buildRocket(b, 0, 0, 3200)} />
+      <Built deps={["launch-rocket"]} build={(b) => buildRocket(b, 0, 0, 3200)} solid={false} />
       <group ref={fire} visible={false}>
         <mesh position={[0, -500, 0]} rotation-x={Math.PI}>
           <coneGeometry args={[220, 1400, 16, 1, true]} />

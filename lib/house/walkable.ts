@@ -1,4 +1,4 @@
-import { blockWalls, roofHeight } from "../town/blocks";
+import { addBlocks, blockWalls, roofHeight, type Block } from "../town/blocks";
 import { TOWN_WALLS } from "../town/colliders";
 import { SURFACES } from "../town/config";
 import { RUG } from "../world/roads";
@@ -110,18 +110,39 @@ export const WALLS: WallSegment[] = [
 /** Buckets walls into a coarse grid so the toy only tests the ones nearby. */
 const CELL = 2000;
 const grid = new Map<string, WallSegment[]>();
-for (const w of WALLS) {
+
+function wallCells(w: WallSegment) {
+  const keys: string[] = [];
   const cx0 = Math.floor((Math.min(w.ax, w.bx) - 50) / CELL);
   const cx1 = Math.floor((Math.max(w.ax, w.bx) + 50) / CELL);
   const cz0 = Math.floor((Math.min(w.az, w.bz) - 50) / CELL);
   const cz1 = Math.floor((Math.max(w.az, w.bz) + 50) / CELL);
-  for (let i = cx0; i <= cx1; i++)
-    for (let j = cz0; j <= cz1; j++) {
-      const key = `${i},${j}`;
+  for (let i = cx0; i <= cx1; i++) for (let j = cz0; j <= cz1; j++) keys.push(`${i},${j}`);
+  return keys;
+}
+
+function insertWall(w: WallSegment) {
+  for (const key of wallCells(w)) {
+    const list = grid.get(key);
+    if (list) list.push(w);
+    else grid.set(key, [w]);
+  }
+}
+WALLS.forEach(insertWall);
+
+/** Makes blocks found while building the town (parked cars, poles) solid and standable; returns an undo. */
+export function registerSolids(blocks: Block[]) {
+  const removeBlocks = addBlocks(blocks);
+  const walls = blockWalls(blocks);
+  walls.forEach(insertWall);
+  return () => {
+    removeBlocks();
+    const gone = new Set(walls);
+    for (const key of new Set(walls.flatMap(wallCells))) {
       const list = grid.get(key);
-      if (list) list.push(w);
-      else grid.set(key, [w]);
+      if (list) grid.set(key, list.filter((w) => !gone.has(w)));
     }
+  };
 }
 const NO_WALLS: WallSegment[] = [];
 export const wallsNear = (x: number, z: number) => grid.get(`${Math.floor(x / CELL)},${Math.floor(z / CELL)}`) ?? NO_WALLS;

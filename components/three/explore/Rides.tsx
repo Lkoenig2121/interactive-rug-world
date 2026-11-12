@@ -42,7 +42,7 @@ function Train() {
   });
   return (
     <group ref={ref}>
-      <Built deps={["train"]} build={buildTrain} />
+      <Built deps={["train"]} build={buildTrain} solid={false} />
     </group>
   );
 }
@@ -141,7 +141,7 @@ function GarbageTruck() {
   });
   return (
     <group ref={ref} visible={false}>
-      <Built deps={["garbage-truck"]} build={buildTruck} />
+      <Built deps={["garbage-truck"]} build={buildTruck} solid={false} />
     </group>
   );
 }

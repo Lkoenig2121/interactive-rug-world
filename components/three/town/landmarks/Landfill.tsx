@@ -18,6 +18,7 @@ const CONVEYOR = { x: 3500, z: 2500, len: 4200 };
 const FURNACE = { x: 3000, z: -4800 };
 
 export function buildGarbageTruck(b: Builder, color = "#3f7a34") {
+  b.solid(0, -150, 260, 760, 0, 360).solid(0, 380, 250, 260, 0, 300);
   b.use("gloss").box(0, 60, -150, 260, 300, 700, color);
   b.use("gloss").box(0, 60, 380, 250, 240, 260, color);
   b.use("glass").box(0, 200, 511, 220, 80, 2, "#26323d");

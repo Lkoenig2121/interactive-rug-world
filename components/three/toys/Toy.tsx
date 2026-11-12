@@ -179,9 +179,10 @@ function Ranger({ legL, legR, armL, armR, wingL, wingR, flame }: Rig & Jet) {
       <Box p={[0, 20, 4.4]} s={[7, 7, 3]} c="#f8fafc" rough={0.3} />
       {[-1, 1].map((s) => (
         <group key={s} ref={s < 0 ? wingL : wingR} position={[s * 2.5, 21.5, 5.6]}>
-          <Box p={[s * 4.5, 0, 0]} s={[9, 1.4, 0.6]} c="#f8fafc" rough={0.3} />
-          <Box p={[s * 8.4, 0, 0]} s={[1.6, 1.5, 0.7]} c="#f97316" rough={0.4} />
-          <Ball p={[s * 8.4, 0.9, 0]} r={0.45} c={s < 0 ? "#ef4444" : "#22c55e"} rough={0.2} />
+          <Box p={[s * 7.5, 0, 0]} s={[15, 3.6, 0.6]} c="#f8fafc" rough={0.3} />
+          <Box p={[s * 7.5, -1.3, 0.05]} s={[14, 0.8, 0.65]} c="#7c3aed" rough={0.4} />
+          <Box p={[s * 15.6, 0, 0]} s={[2.4, 4.2, 0.8]} c="#f97316" rough={0.4} />
+          <Ball p={[s * 15.6, 2.6, 0]} r={0.7} c={s < 0 ? "#ef4444" : "#22c55e"} rough={0.2} />
         </group>
       ))}
       <group ref={flame} position={[0, 16.4, 5.4]} visible={false}>
@@ -209,6 +210,91 @@ function Ranger({ legL, legR, armL, armR, wingL, wingR, flame }: Rig & Jet) {
   );
 }
 
+type GroupRef = React.RefObject<THREE.Group | null>;
+
+/** Seat heights (cm above the ground) the toy's hips rest at. */
+const SADDLE_Y = 33.4;
+const CAR_SEAT_Y = 19;
+
+/** Palomino toy horse, about 45 cm tall at the ears, facing -z. */
+function ToyHorse({ legs }: { legs: GroupRef[] }) {
+  const coat = "#d9a441";
+  const mane = "#f6ead0";
+  const hips: V3[] = [
+    [-3.6, 20, -8],
+    [3.6, 20, -8],
+    [-3.6, 20, 8],
+    [3.6, 20, 8],
+  ];
+  return (
+    <group>
+      <Ball p={[0, 23, 0]} r={1} c={coat} scale={[8, 8.5, 15]} />
+      <Cyl p={[0, 32, -12]} r={[3.2, 4.6]} h={14} c={coat} rot={[-0.6, 0, 0]} />
+      <Box p={[0, 35.5, -11.2]} s={[1.6, 13, 3.5]} c={mane} r={[-0.6, 0, 0]} rough={0.9} />
+      <Box p={[0, 39, -20]} s={[6, 6.5, 12]} c={coat} r={[-0.4, 0, 0]} />
+      <Box p={[0, 36.6, -25]} s={[5.4, 5, 4]} c="#f0d9a8" r={[-0.4, 0, 0]} />
+      <Box p={[0, 36.8, -23]} s={[6.3, 0.8, 0.8]} c="#1e3a8a" r={[-0.4, 0, 0]} />
+      {[-1, 1].map((s) => (
+        <group key={s}>
+          <Ball p={[s * 3.1, 40.6, -20]} r={0.9} c="#1f2937" rough={0.2} />
+          <Box p={[s * 1.8, 43.6, -16.6]} s={[1.4, 3.2, 1.2]} c={coat} />
+          <Box p={[s * 8.3, 26, 0]} s={[0.5, 9, 1.2]} c="#3f2a17" />
+          <Box p={[s * 8.3, 21.4, 0]} s={[1.2, 0.6, 3]} c="#9ca3af" rough={0.3} />
+        </group>
+      ))}
+      <Box p={[0, 42.4, -15.4]} s={[1.6, 2.4, 3]} c={mane} rough={0.9} />
+      <Cyl p={[0, 20, 16.5]} r={[1.8, 0.9]} h={14} c={mane} rot={[-0.3, 0, 0]} rough={0.9} />
+      <Box p={[0, 31.6, 0]} s={[11, 1.6, 10]} c="#1d4ed8" rough={0.5} />
+      <Box p={[0, 33, -4.4]} s={[4, 2.4, 1.6]} c="#1d4ed8" rough={0.5} />
+      <Box p={[0, 30.8, 0]} s={[16.6, 0.6, 12]} c="#f8fafc" rough={0.9} />
+      {hips.map((p, i) => (
+        <group key={i} ref={legs[i]} position={p}>
+          <Cyl p={[0, -9, 0]} r={[2, 1.6]} h={18} c={coat} />
+          <Cyl p={[0, -18.5, 0]} r={1.9} h={3} c="#3b2a1a" />
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/** Green remote-control buggy, about 44 cm long, facing -z. */
+function RcCar({ spin, steer }: { spin: GroupRef[]; steer: GroupRef[] }) {
+  const green = "#16a34a";
+  const dark = "#1f2937";
+  const wheels: V3[] = [
+    [-13, 6, -13],
+    [13, 6, -13],
+    [-13, 6, 13],
+    [13, 6, 13],
+  ];
+  return (
+    <group>
+      <Box p={[0, 9, 0]} s={[20, 4, 40]} c={dark} />
+      <Box p={[0, 14, 1]} s={[18, 6, 24]} c={green} rough={0.25} />
+      <Box p={[0, 12, -14]} s={[18, 3, 10]} c={green} r={[0.15, 0, 0]} rough={0.25} />
+      <Box p={[0, 17.05, 1]} s={[4, 0.2, 24]} c="#f8fafc" rough={0.3} />
+      <Box p={[0, 8, -21]} s={[22, 3, 2]} c={dark} />
+      <Box p={[0, 21, 17]} s={[22, 1, 5]} c={green} rough={0.25} />
+      {[-1, 1].map((s) => (
+        <group key={s}>
+          <Box p={[s * 7, 18.5, 17]} s={[1, 5, 1.5]} c={dark} />
+          <Ball p={[s * 6, 12, -19.2]} r={1.3} c="#fef9c3" rough={0.1} />
+        </group>
+      ))}
+      <Cyl p={[6, 27, 15]} r={0.35} h={22} c="#111827" />
+      <Ball p={[6, 38, 15]} r={0.9} c="#ef4444" rough={0.3} />
+      {wheels.map((p, i) => (
+        <group key={i} ref={i < 2 ? steer[i] : undefined} position={p}>
+          <group ref={spin[i]}>
+            <Cyl p={[0, 0, 0]} r={6} h={5} c="#111827" rot={[0, 0, Math.PI / 2]} rough={0.9} />
+            <Cyl p={[0, 0, 0]} r={3} h={5.4} c="#e5e7eb" rot={[0, 0, Math.PI / 2]} rough={0.3} />
+          </group>
+        </group>
+      ))}
+    </group>
+  );
+}
+
 /** The toy you play as, standing wherever it was dropped, with a simple walk cycle. */
 export function Toy() {
   const kind = useStore((s) => s.toy);
@@ -217,8 +303,13 @@ export function Toy() {
   const plane = useRef<THREE.Group>(null);
   const rig: Rig = { legL: useRef(null), legR: useRef(null), armL: useRef(null), armR: useRef(null) };
   const jet: Jet = { wingL: useRef(null), wingR: useRef(null), flame: useRef(null) };
+  const horse = useRef<THREE.Group>(null);
+  const car = useRef<THREE.Group>(null);
+  const horseLegs: GroupRef[] = [useRef(null), useRef(null), useRef(null), useRef(null)];
+  const wheelSpin: GroupRef[] = [useRef(null), useRef(null), useRef(null), useRef(null)];
+  const wheelSteer: GroupRef[] = [useRef(null), useRef(null)];
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock }, dt) => {
     const t = runtime.toy;
     const g = root.current;
     if (!g) return;
@@ -270,6 +361,36 @@ export function Toy() {
       fl.scale.set(1, (0.8 + Math.sin(now * 40) * 0.2) * boost, 1);
     }
     if (plane.current) plane.current.visible = t.gliding && !flying;
+
+    // Horse and RC car: the toy sits on top, straddling the saddle or kneeling on the buggy.
+    const onHorse = t.mount === "horse";
+    const inCar = t.mount === "car";
+    if (horse.current) horse.current.visible = onHorse;
+    if (car.current) car.current.visible = inCar;
+    const hip = kind === "cowboy" ? 15 : 13.5;
+    if (body.current) body.current.position.y = onHorse ? SADDLE_Y - hip : inCar ? CAR_SEAT_Y - hip : 0;
+    if (onHorse || inCar) {
+      const spread = onHorse ? 0.6 : 0.15;
+      const fwd = onHorse ? 0.25 : 1.45;
+      rig.legL.current?.rotation.set(fwd, 0, -spread);
+      rig.legR.current?.rotation.set(fwd, 0, spread);
+      const reins = onHorse ? 1 : 0.5;
+      rig.armL.current?.rotation.set(reins, 0, 0);
+      rig.armR.current?.rotation.set(reins, 0, 0);
+    }
+    if (onHorse) {
+      const jumping = Math.abs(t.vy) > 1;
+      const gallop = Math.min(1, Math.abs(t.speed) / 200) * 0.7;
+      horseLegs.forEach((ref, i) => {
+        const front = i < 2;
+        const a = jumping ? (front ? 0.8 : -0.6) : Math.sin(t.phase + (front ? 0 : Math.PI) + (i % 2) * 0.5) * gallop;
+        ref.current?.rotation.set(a, 0, 0);
+      });
+    }
+    if (inCar) {
+      for (const ref of wheelSpin) if (ref.current) ref.current.rotation.x -= (t.speed * dt) / 6;
+      for (const ref of wheelSteer) if (ref.current) ref.current.rotation.y = t.turn * 0.45;
+    }
   });
 
   if (!kind) return null;
@@ -278,6 +399,12 @@ export function Toy() {
       <group ref={body}>{kind === "cowboy" ? <Cowboy {...rig} /> : <Ranger {...rig} {...jet} />}</group>
       <group ref={plane} visible={false}>
         <PaperPlane />
+      </group>
+      <group ref={horse} visible={false}>
+        <ToyHorse legs={horseLegs} />
+      </group>
+      <group ref={car} visible={false}>
+        <RcCar spin={wheelSpin} steer={wheelSteer} />
       </group>
     </group>
   );

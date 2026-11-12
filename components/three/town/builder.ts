@@ -95,11 +95,33 @@ interface Chunk {
   col: Float32Array;
 }
 
+/** Something the toy can't walk through, in the builder's own space (bottom at `y`, yaw `ry`). */
+export interface Solid {
+  x: number;
+  y: number;
+  z: number;
+  ry: number;
+  hw: number;
+  hd: number;
+  h: number;
+  round?: boolean;
+}
+
 export class Builder {
   private chunks = new Map<Slot, Chunk[]>();
   private slot: Slot = "paint";
   /** Offset and yaw applied to everything added, for building sub-assemblies in place. */
   private frame = { x: 0, y: 0, z: 0, ry: 0 };
+  readonly solids: Solid[] = [];
+
+  /** Marks a `w` x `d` box from height `y0` to `y1` as solid (vehicles and other props built from many parts). */
+  solid(x: number, z: number, w: number, d: number, y0: number, y1: number) {
+    const f = this.frame;
+    const c = Math.cos(f.ry);
+    const s = Math.sin(f.ry);
+    this.solids.push({ x: f.x + x * c + z * s, y: f.y + y0, z: f.z - x * s + z * c, ry: f.ry, hw: w / 2, hd: d / 2, h: y1 - y0 });
+    return this;
+  }
 
   use(slot: Slot) {
     this.slot = slot;
@@ -180,6 +202,14 @@ export class Builder {
     const ratio = Math.round((rTop / r) * 100) / 100;
     const g = cached(`cyl-${seg}-${ratio}`, () => new THREE.CylinderGeometry(ratio, 1, 1, seg));
     if (rot) return this.add(g, x, y, z, r, h, r, color, rot);
+    // Upright posts standing on the ground (lamps, sign and flag poles, columns) are solid.
+    if (this.frame.y + y <= 1 && r >= 4 && r <= 80 && h >= 150 && this.slot !== "glass" && this.slot !== "glow") {
+      const f = this.frame;
+      const c = Math.cos(f.ry);
+      const s = Math.sin(f.ry);
+      const pr = Math.max(r, 8);
+      this.solids.push({ x: f.x + x * c + z * s, y: f.y + y, z: f.z - x * s + z * c, ry: 0, hw: pr, hd: pr, h, round: true });
+    }
     return this.add(g, x, y + h / 2, z, r, h, r, color);
   }
 

@@ -15,6 +15,8 @@ export interface Block {
   hd: number;
   round?: boolean;
   wallTop: number;
+  /** Where the walls start (defaults to just below the lawn), for parts sitting on something else. */
+  wallBottom?: number;
   /** Gable roof: height rises by `rise` toward the ridge, measured across local `across`. */
   ridge?: { across: "x" | "z"; half: number; rise: number };
   /** Walls are already covered elsewhere (landmark shells, Andy's house). */
@@ -100,15 +102,35 @@ function roofAt(b: Block, p: { x: number; z: number }) {
 
 const CELL = 3000;
 const grid = new Map<string, Block[]>();
-for (const b of BLOCKS) {
+
+function cellsOf(b: Block) {
   const r = b.round ? b.hw : Math.hypot(b.hw, b.hd);
+  const keys: string[] = [];
   for (let i = Math.floor((b.frame.x - r) / CELL); i <= Math.floor((b.frame.x + r) / CELL); i++)
-    for (let j = Math.floor((b.frame.z - r) / CELL); j <= Math.floor((b.frame.z + r) / CELL); j++) {
-      const key = `${i},${j}`;
-      const list = grid.get(key);
-      if (list) list.push(b);
-      else grid.set(key, [b]);
+    for (let j = Math.floor((b.frame.z - r) / CELL); j <= Math.floor((b.frame.z + r) / CELL); j++) keys.push(`${i},${j}`);
+  return keys;
+}
+
+function insert(b: Block) {
+  for (const key of cellsOf(b)) {
+    const list = grid.get(key);
+    if (list) list.push(b);
+    else grid.set(key, [b]);
+  }
+}
+BLOCKS.forEach(insert);
+
+/** Adds blocks found at runtime (parked cars, poles); returns a function that removes them again. */
+export function addBlocks(list: Block[]) {
+  list.forEach(insert);
+  return () => {
+    const gone = new Set(list);
+    const keys = new Set(list.flatMap(cellsOf));
+    for (const key of keys) {
+      const cell = grid.get(key);
+      if (cell) grid.set(key, cell.filter((b) => !gone.has(b)));
     }
+  };
 }
 
 /**
@@ -132,9 +154,9 @@ export function roofHeight(x: number, z: number, y: number): number | null {
 }
 
 /** Wall segments around every block that doesn't already have walls. */
-export function blockWalls(): WallSegment[] {
+export function blockWalls(blocks: Block[] = BLOCKS): WallSegment[] {
   const out: WallSegment[] = [];
-  for (const b of BLOCKS) {
+  for (const b of blocks) {
     if (b.noWalls) continue;
     const pts: { x: number; z: number }[] = [];
     if (b.round) {
@@ -154,7 +176,7 @@ export function blockWalls(): WallSegment[] {
     for (let i = 0; i < pts.length; i++) {
       const a = pts[i];
       const c = pts[(i + 1) % pts.length];
-      out.push({ ax: a.x, az: a.z, bx: c.x, bz: c.z, y0: EXT_Y - 20, y1: b.wallTop });
+      out.push({ ax: a.x, az: a.z, bx: c.x, bz: c.z, y0: b.wallBottom ?? EXT_Y - 20, y1: b.wallTop });
     }
   }
   return out;

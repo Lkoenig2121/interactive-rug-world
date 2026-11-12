@@ -4,26 +4,56 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import * as THREE from "three";
 import { EXT_Y } from "@/lib/house/layout";
+import { registerSolids } from "@/lib/house/walkable";
 import { labelTexture, type LabelOptions } from "@/lib/three/textures";
 import { runtime } from "@/lib/runtime";
 import { useStore } from "@/lib/store";
+import type { Block } from "@/lib/town/blocks";
 import { insideLandmark, type Landmark } from "@/lib/town/config";
 import { Enterable, isEnterableBuilding } from "../house/HouseEnterTargets";
 import { Builder, slotMaterial, type Slot } from "./builder";
 
 /** Merged meshes produced by a builder function (rebuilt only when `deps` change). */
-export function Built({ build, deps = [], castShadow = true, receiveShadow = true }: { build: (b: Builder) => void; deps?: unknown[]; castShadow?: boolean; receiveShadow?: boolean }) {
+export function Built({
+  build,
+  deps = [],
+  castShadow = true,
+  receiveShadow = true,
+  solid = true,
+}: {
+  build: (b: Builder) => void;
+  deps?: unknown[];
+  castShadow?: boolean;
+  receiveShadow?: boolean;
+  /** Register cars, poles and other solids for collision; off for things that move. */
+  solid?: boolean;
+}) {
   const key = JSON.stringify(deps);
-  const parts = useMemo(() => {
+  const root = useRef<THREE.Group>(null);
+  const { parts, solids } = useMemo(() => {
     const b = new Builder();
     build(b);
-    return b.build();
+    return { parts: b.build(), solids: b.solids };
     // `build` is a fresh closure every render; rebuild only when the caller's deps change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
   useEffect(() => () => parts.forEach((p) => p.geometry.dispose()), [parts]);
+  useEffect(() => {
+    const g = root.current;
+    if (!solid || !g || !solids.length) return;
+    g.updateWorldMatrix(true, false);
+    const m = g.matrixWorld;
+    const fwd = new THREE.Vector3(0, 0, 1).transformDirection(m);
+    const yaw = Math.atan2(fwd.x, fwd.z);
+    const v = new THREE.Vector3();
+    const blocks: Block[] = solids.map((s) => {
+      v.set(s.x, s.y, s.z).applyMatrix4(m);
+      return { frame: { x: v.x, z: v.z, rot: s.ry + yaw }, hw: s.hw, hd: s.hd, round: s.round, wallBottom: v.y - 5, wallTop: v.y + s.h };
+    });
+    return registerSolids(blocks);
+  }, [solids, solid]);
   return (
-    <>
+    <group ref={root}>
       {parts.map((p) => (
         <mesh
           key={p.slot}
@@ -33,7 +63,7 @@ export function Built({ build, deps = [], castShadow = true, receiveShadow = tru
           receiveShadow={receiveShadow && p.slot !== "glow"}
         />
       ))}
-    </>
+    </group>
   );
 }
 
@@ -212,6 +242,7 @@ export function buildCars(b: Builder, x0: number, z: number, count: number, spac
 
 /** A sedan facing local +z, about 180 x 450 cm. */
 export function buildCar(b: Builder, color: string) {
+  b.solid(0, 0, 175, 450, 0, 100).solid(0, -30, 160, 240, 100, 155);
   b.use("gloss").box(0, 30, 0, 175, 70, 450, color);
   b.use("gloss").box(0, 100, -30, 160, 55, 240, color);
   b.use("glass").box(0, 102, -30, 164, 48, 230, "#26323d");

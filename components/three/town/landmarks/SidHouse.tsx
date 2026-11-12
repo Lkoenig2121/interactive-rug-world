@@ -27,6 +27,7 @@ function spiderDoll(b: Builder, x: number, z: number, s = 1) {
 
 /** Toy truck cab with a doll's legs instead of wheels. */
 function legTruck(b: Builder, x: number, z: number) {
+  b.solid(x, z, 40, 26, 0, 44).solid(x - 8, z, 20, 24, 44, 60);
   b.use("gloss").box(x, 22, z, 40, 22, 26, "#b23a2a");
   b.use("gloss").box(x - 8, 44, z, 20, 16, 24, "#b23a2a");
   for (const [dx, dz] of [

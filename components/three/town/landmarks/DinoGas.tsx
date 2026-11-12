@@ -102,7 +102,7 @@ function Lift() {
         <meshStandardMaterial color="#e63946" roughness={0.5} />
       </mesh>
       <group position={[0, 16, 0]} rotation-y={Math.PI / 2}>
-        <Built build={(b) => buildCar(b, "#2e86c1")} />
+        <Built build={(b) => buildCar(b, "#2e86c1")} solid={false} />
       </group>
     </group>
   );
