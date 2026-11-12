@@ -98,7 +98,7 @@ function ToyPicker() {
 
 /** Toolbar while playing as a toy. */
 export function ToyToolbar() {
-  const goToRoom = useStore((s) => s.goToRoom);
+  const exploreHere = useStore((s) => s.exploreHere);
   const enterWorld = useStore((s) => s.enterWorld);
   const setNav = useStore((s) => s.setNavPanelOpen);
   const navOpen = useStore((s) => s.navPanelOpen);
@@ -115,7 +115,7 @@ export function ToyToolbar() {
       <span className="mx-1 h-6 w-px bg-slate-300/70" />
       <ToyPicker />
       <ToolButton icon="nav" label="Town map" showLabel onClick={() => setNav(!navOpen)} active={navOpen} />
-      <ToolButton icon="layers" label="Explore view" showLabel onClick={goToRoom} />
+      <ToolButton icon="layers" label="Explore view" showLabel onClick={exploreHere} />
       <ToolButton icon={fs ? "shrink" : "expand"} label="Toggle fullscreen" onClick={toggleFs} />
     </div>
   );

@@ -33,6 +33,7 @@ export const INTERIOR_SOLIDS: Record<string, PropBox[]> = {
     ...row([-3900, -2700, -1500, 1500, 2700, 3900], -700, 180, 3600, 380, "toyshelf", TOY_AISLES),
     ...row([-3200, -2200, 2200, 3200], 2000, 520, 130, 100, "checkout"),
     { x: 0, z: -1700, w: 900, d: 500, h: 230, kind: "collectibles", label: "Collectibles" },
+    { x: -1600, z: -2900, w: 900, d: 80, h: 360, kind: "rangerwall" },
   ],
   grocery: [
     ...row([-1500, -900, -300, 300, 900], -450, 130, 1300, 210, "groceryshelf"),
@@ -50,6 +51,12 @@ export const INTERIOR_SOLIDS: Record<string, PropBox[]> = {
     ]),
     { x: 1900, z: 900, w: 240, d: 240, h: 230, kind: "claw" },
     { x: -1950, z: 900, w: 500, d: 140, h: 120, kind: "prizes" },
+    { x: -1600, z: 200, w: 240, d: 110, h: 90, kind: "booth" },
+    { x: -1080, z: 200, w: 240, d: 110, h: 90, kind: "booth" },
+    { x: -560, z: 200, w: 240, d: 110, h: 90, kind: "booth" },
+    { x: 400, z: 200, w: 240, d: 110, h: 90, kind: "booth" },
+    { x: 920, z: 200, w: 240, d: 110, h: 90, kind: "booth" },
+    { x: 1440, z: 200, w: 240, d: 110, h: 90, kind: "booth" },
   ],
   cinema: [{ x: 0, z: -1100, w: 2400, d: 80, h: 300, kind: "screen" }, { x: 0, z: 950, w: 900, d: 130, h: 110, kind: "concession" }],
   bowling: [...row([-1050, -350, 350, 1050], -400, 260, 2000, 6, "lane")],
@@ -60,7 +67,10 @@ export const INTERIOR_SOLIDS: Record<string, PropBox[]> = {
   cityhall: [{ x: 0, z: -700, w: 1600, d: 300, h: 100, kind: "dais" }],
   fire: [{ x: -500, z: -100, w: 900, d: 2200, h: 300, kind: "firetruck" }],
   school: [{ x: 0, z: -1150, w: 1600, d: 60, h: 160, kind: "chalkboard" }],
-  recycling: [{ x: 0, z: -400, w: 3800, d: 300, h: 160, kind: "conveyor" }],
+  recycling: [
+    { x: 0, z: -400, w: 3800, d: 300, h: 160, kind: "conveyor" },
+    { x: 2100, z: -1600, w: 500, d: 400, h: 400, kind: "incinerator" },
+  ],
   terminal: [
     ...row([-4000, -2000], -300, 1600, 140, 110, "checkin"),
     { x: 2600, z: 0, w: 1600, d: 700, h: 60, kind: "carousel" },
@@ -74,8 +84,25 @@ export const INTERIOR_SOLIDS: Record<string, PropBox[]> = {
   sheriff: [{ x: 500, z: -350, w: 600, d: 500, h: 250, kind: "cell" }],
   general: [{ x: 0, z: -500, w: 1400, d: 100, h: 200, kind: "storeshelf" }],
   station: [{ x: 1100, z: 300, w: 500, d: 120, h: 110, kind: "ticket" }],
-  bonnie: [{ x: -650, z: -500, w: 400, d: 150, h: 160, kind: "toybox" }],
-  daycare: [{ x: -2700, z: -1200, w: 220, d: 900, h: 140, kind: "cubbies" }],
+  bonnie: [
+    { x: -650, z: -500, w: 400, d: 150, h: 160, kind: "toybox" },
+    { x: -250, z: 50, w: 260, d: 140, h: 70, kind: "craft" },
+  ],
+  daycare: [
+    { x: -2700, z: -1200, w: 220, d: 900, h: 140, kind: "cubbies" },
+    { x: 2200, z: -200, w: 720, d: 720, h: 70, kind: "ballpit" },
+    { x: -1400, z: -1400, w: 220, d: 220, h: 90, kind: "recliner" },
+  ],
+  dino: [{ x: 570, z: -420, w: 160, d: 70, h: 160, kind: "cooler" }],
+  sid: [
+    { x: -380, z: -80, w: 420, d: 140, h: 90, kind: "couch" },
+    { x: 420, z: -350, w: 40, d: 280, h: 160, kind: "tv" },
+    { x: -20, z: 80, w: 160, d: 160, h: 50, kind: "table" },
+    { x: 480, z: 280, w: 280, d: 80, h: 110, kind: "desk" },
+    { x: -570, z: -120, w: 420, d: 140, h: 90, kind: "workbench" },
+    { x: -480, z: -525, w: 380, d: 80, h: 110, kind: "kitchen" },
+    { x: 380, z: -525, w: 380, d: 80, h: 110, kind: "kitchen" },
+  ],
 };
 
 export const PARTITIONS: Record<string, Partition[]> = {
@@ -89,6 +116,11 @@ export const PARTITIONS: Record<string, Partition[]> = {
     { ax: 1000, az: -1800, bx: 1000, bz: 600 },
     { ax: -1000, az: -600, bx: -80, bz: -600 },
     { ax: 80, az: -600, bx: 1000, bz: -600 },
+  ],
+  // Locked back storeroom in the far corner, only reachable through a vent.
+  toybarn: [
+    { ax: 2000, az: -2550, bx: 4500, bz: -2550 },
+    { ax: 2000, az: -3000, bx: 2000, bz: -2550 },
   ],
   // Toy room on the left, living room on the right.
   bonnie: [

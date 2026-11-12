@@ -93,17 +93,24 @@ export function MapCameraControls({ variant }: { variant: keyof typeof VARIANTS 
       const cap = variant === "room" && houseFloorAt(target) !== null ? INDOOR_ZOOM : maxDistance;
       toPos = target.clone().add(offset.multiplyScalar(Math.min(1.7, cap / offset.length())));
     } else if (cmd.kind === "look") {
-      if (variant !== "room" || !cmd.lookAt) return;
-      const dest = housePlaceAtPoint(cmd.lookAt);
-      if (dest) {
-        lockedRoom.current = dest;
-        const view = explorePose(dest);
-        toTarget = new THREE.Vector3(view.target.x, view.target.y, view.target.z);
-        toPos = new THREE.Vector3(view.pos.x, view.pos.y, view.pos.z);
-      } else {
+      if (!cmd.lookAt) return;
+      if (variant === "room") {
+        const dest = housePlaceAtPoint(cmd.lookAt);
+        if (dest) {
+          lockedRoom.current = dest;
+          const view = explorePose(dest);
+          toTarget = new THREE.Vector3(view.target.x, view.target.y, view.target.z);
+          toPos = new THREE.Vector3(view.pos.x, view.pos.y, view.pos.z);
+        } else {
+          toTarget = new THREE.Vector3(cmd.lookAt.x, cmd.lookAt.y, cmd.lookAt.z);
+          toPos = toTarget.clone().add(offset.length() > 1 ? offset.setLength(Math.min(offset.length(), 280)) : new THREE.Vector3(0, 180, 220));
+        }
+      } else if (variant === "house") {
         toTarget = new THREE.Vector3(cmd.lookAt.x, cmd.lookAt.y, cmd.lookAt.z);
-        toPos = toTarget.clone().add(offset.length() > 1 ? offset.setLength(Math.min(offset.length(), 280)) : new THREE.Vector3(0, 180, 220));
-      }
+        toPos = cmd.lookFrom
+          ? new THREE.Vector3(cmd.lookFrom.x, cmd.lookFrom.y, cmd.lookFrom.z)
+          : toTarget.clone().add(offset.length() > 1 ? offset.setLength(Math.min(offset.length(), 280)) : new THREE.Vector3(0, 180, 220));
+      } else return;
     } else {
       const p = pose();
       toPos = p.pos;

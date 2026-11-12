@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { runtime } from "@/lib/runtime";
 import type { Landmark } from "@/lib/town/config";
 import type { Builder } from "../builder";
+import { dressDino } from "../filmSet";
 import { buildCar, buildFlatRoof, buildLamp, buildShell, Built, LandmarkGroup, Roof, Sign } from "../parts";
 
 const BLUE = "#1f5fbf";
@@ -57,7 +58,9 @@ function buildStation(b: Builder, l: Landmark) {
   for (let i = 0; i < 4; i++) b.use("paint").cyl(-700, i * 26, 350, 50, 24, "#1d1d1f", 16, 50);
   b.use("gloss").box(450, 0, -200, 400, 100, 90, BLUE);
   b.use("paint").box(450, 100, -200, 410, 6, 100, WHITE);
+  b.use("glass").cyl(450, 106, -200, 22, 36, "#dbeafe", 14, 18);
   b.use("gloss").box(450, 0, -hd + 60, 400, 180, 60, "#f2c14e");
+  dressDino(b, l);
   // Canopy over two pump islands.
   const cz = hd + 900;
   for (const x of [-700, 700]) b.use("metal").box(x, 0, cz, 40, 480, 40, WHITE);

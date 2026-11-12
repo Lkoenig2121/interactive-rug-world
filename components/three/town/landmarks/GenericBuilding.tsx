@@ -3,6 +3,7 @@
 import type { Landmark } from "@/lib/town/config";
 import { INTERIOR_SOLIDS } from "@/lib/town/interiors";
 import type { Builder } from "../builder";
+import { dressCivic } from "../filmSet";
 import { buildProps } from "../interiorProps";
 import { buildCars, buildFlatRoof, buildLamp, buildParking, buildShell, Built, LandmarkGroup, Roof, Sign, type ShellStyle } from "../parts";
 
@@ -332,6 +333,7 @@ export function GenericBuilding({ l }: { l: Landmark }) {
           buildShell(b, l, style.shell);
           style.facade?.(b, l);
           buildProps(b, INTERIOR_SOLIDS[l.id] ?? INTERIOR_SOLIDS[l.kind] ?? [], l.x);
+          dressCivic(b, l);
           if (style.lot) {
             const z = l.d / 2 + 200 + style.lot / 2;
             const count = Math.floor((l.w - 400) / 280);

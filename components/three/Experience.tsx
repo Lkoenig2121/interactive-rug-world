@@ -11,6 +11,12 @@ import { useStore } from "@/lib/store";
 import { worldColliders } from "@/lib/world/colliders";
 import { CameraTransition } from "./CameraTransition";
 import { DrivingController } from "./DrivingController";
+import { DayNight } from "./explore/DayNight";
+import { Passages } from "./explore/Passages";
+import { Rides } from "./explore/Rides";
+import { SkyDome } from "./explore/SkyDome";
+import { Stars } from "./explore/Stars";
+import { WorldEvents } from "./explore/WorldEvents";
 import { HouseExterior } from "./house/HouseExterior";
 import { HouseInterior } from "./house/HouseInterior";
 import { Neighborhood, Sky } from "./house/Neighborhood";
@@ -20,10 +26,12 @@ import { MapLabels } from "./MapLabels";
 import { NavigationSystem } from "./NavigationSystem";
 import { RoomLighting, RoomScene } from "./RoomScene";
 import { RugScene } from "./RugScene";
+import { SpaceLevel } from "./space/SpaceLevel";
 import { SpawnPicker } from "./toys/SpawnPicker";
 import { Toy } from "./toys/Toy";
 import { ToyController } from "./toys/ToyController";
 import { TownRoute } from "./town/TownRoute";
+import { MissionWorld } from "./town/MissionWorld";
 import { ToyStoryTown } from "./town/ToyStoryTown";
 import { WalkingController } from "./WalkingController";
 
@@ -41,7 +49,8 @@ function SceneEnvironment() {
 
 export default function Experience() {
   const mode = useStore((s) => s.mode);
-  const showHouse = mode === "room" || mode === "house" || mode === "toy" || mode === "transition";
+  const inSpace = useStore((s) => s.inSpace);
+  const showHouse = (mode === "room" || mode === "house" || mode === "toy" || mode === "transition") && !inSpace;
   const initial = useMemo(() => roomCameraPose(typeof window === "undefined" ? 1.6 : window.innerWidth / window.innerHeight), []);
 
   return (
@@ -69,10 +78,12 @@ export default function Experience() {
 
       <group visible={mode !== "interior"}>
         <RoomLighting />
-        <RoomScene />
-        <RugScene />
-        <NavigationSystem />
-        <MapLabels />
+        <group visible={!inSpace}>
+          <RoomScene />
+          <RugScene />
+          <NavigationSystem />
+          <MapLabels />
+        </group>
         {/* The rest of the house and the suburb are only drawn when they can be seen. */}
         <group visible={showHouse}>
           <Sky />
@@ -80,10 +91,18 @@ export default function Experience() {
           <HouseExterior />
           <Neighborhood />
           <ToyStoryTown />
+          <MissionWorld />
           <TownRoute />
+          <Stars />
+          <SkyDome />
+          <Passages />
+          <Rides />
+          <WorldEvents />
         </group>
+        {inSpace && <SpaceLevel />}
         <Toy />
       </group>
+      <DayNight />
 
       {mode === "interior" && <InteriorScene />}
 

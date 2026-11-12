@@ -1,13 +1,15 @@
 "use client";
 
 import { useFrame } from "@react-three/fiber";
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import { mat } from "@/lib/three/materials";
 import { runtime } from "@/lib/runtime";
 import { useStore } from "@/lib/store";
 
 type V3 = [number, number, number];
+
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
 function Box({ p, s, c, r, rough = 0.6 }: { p: V3; s: V3; c: string; r?: V3; rough?: number }) {
   return (
@@ -41,7 +43,43 @@ interface Rig {
   armR: React.RefObject<THREE.Group | null>;
 }
 
+interface Jet {
+  wingL: React.RefObject<THREE.Group | null>;
+  wingR: React.RefObject<THREE.Group | null>;
+  flame: React.RefObject<THREE.Group | null>;
+}
+
 const SKIN = "#f2c9a0";
+
+/** Folded paper plane the toy hangs under while gliding. */
+function PaperPlane() {
+  const paper = mat("#fbfaf5", { roughness: 0.8, side: THREE.DoubleSide });
+  const wings = useMemo(
+    () =>
+      [-1, 1].map((s) => {
+        const g = new THREE.BufferGeometry();
+        g.setAttribute("position", new THREE.BufferAttribute(new Float32Array([0, 0, -18, s * 16, 0, 14, 0, -2, 14]), 3));
+        g.computeVertexNormals();
+        return g;
+      }),
+    [],
+  );
+  return (
+    <group position={[0, 40, 0]}>
+      {wings.map((g, i) => (
+        <mesh key={i} geometry={g} rotation={[0, 0, (i ? 1 : -1) * 0.18]} material={paper} />
+      ))}
+      <mesh position={[0, -1, 0]} material={paper}>
+        <boxGeometry args={[0.4, 4, 30]} />
+      </mesh>
+      {[-1, 1].map((s) => (
+        <mesh key={`h${s}`} position={[s * 3, -10, 0]} rotation-z={s * 0.3} material={mat("#c9c3b5", { roughness: 0.9 })}>
+          <cylinderGeometry args={[0.15, 0.15, 18, 4]} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
 
 /** Face details on a head of radius `r` centered at `y`, looking toward -z. */
 function Face({ y, r }: { y: number; r: number }) {
@@ -108,8 +146,8 @@ function Cowboy({ legL, legR, armL, armR }: Rig) {
   );
 }
 
-/** Space-ranger action figure, about 32 cm tall. */
-function Ranger({ legL, legR, armL, armR }: Rig) {
+/** Space-ranger action figure, about 32 cm tall, with fold-out wings and a jetpack. */
+function Ranger({ legL, legR, armL, armR, wingL, wingR, flame }: Rig & Jet) {
   const leg = (
     <>
       <Cyl p={[0, -5.5, 0]} r={2.1} h={11} c="#f8fafc" rough={0.35} />
@@ -140,11 +178,20 @@ function Ranger({ legL, legR, armL, armR }: Rig) {
       ))}
       <Box p={[0, 20, 4.4]} s={[7, 7, 3]} c="#f8fafc" rough={0.3} />
       {[-1, 1].map((s) => (
-        <group key={s} position={[s * 5.5, 21.5, 5]} rotation-z={s * -0.35}>
-          <Box p={[s * 3.5, 0, 0]} s={[9, 1.4, 0.6]} c="#f8fafc" rough={0.3} />
-          <Box p={[s * 7.4, 0, 0]} s={[1.6, 1.5, 0.7]} c="#f97316" rough={0.4} />
+        <group key={s} ref={s < 0 ? wingL : wingR} position={[s * 2.5, 21.5, 5.6]}>
+          <Box p={[s * 4.5, 0, 0]} s={[9, 1.4, 0.6]} c="#f8fafc" rough={0.3} />
+          <Box p={[s * 8.4, 0, 0]} s={[1.6, 1.5, 0.7]} c="#f97316" rough={0.4} />
+          <Ball p={[s * 8.4, 0.9, 0]} r={0.45} c={s < 0 ? "#ef4444" : "#22c55e"} rough={0.2} />
         </group>
       ))}
+      <group ref={flame} position={[0, 16.4, 5.4]} visible={false}>
+        {[-1.8, 1.8].map((x) => (
+          <mesh key={x} position={[x, -3, 0]} rotation-x={Math.PI}>
+            <coneGeometry args={[1.1, 6, 10]} />
+            <meshBasicMaterial color="#ffb347" transparent opacity={0.85} toneMapped={false} />
+          </mesh>
+        ))}
+      </group>
       <Cyl p={[0, 24.2, 0]} r={3.4} h={1.2} c="#f97316" rough={0.4} />
       <group ref={armL} position={[-6.4, 22.6, 0]}>
         {arm(-1)}
@@ -166,28 +213,72 @@ function Ranger({ legL, legR, armL, armR }: Rig) {
 export function Toy() {
   const kind = useStore((s) => s.toy);
   const root = useRef<THREE.Group>(null);
+  const body = useRef<THREE.Group>(null);
+  const plane = useRef<THREE.Group>(null);
   const rig: Rig = { legL: useRef(null), legR: useRef(null), armL: useRef(null), armR: useRef(null) };
+  const jet: Jet = { wingL: useRef(null), wingR: useRef(null), flame: useRef(null) };
 
   useFrame(({ clock }) => {
     const t = runtime.toy;
     const g = root.current;
     if (!g) return;
-    const stride = Math.min(1, Math.abs(t.speed) / 140);
-    const airborne = Math.abs(t.vy) > 1;
+    const now = clock.elapsedTime;
+    const flying = t.mount === "fly";
+    // On the train roof the toy walks and jumps normally; on other rides it just stands.
+    const riding = t.mount === "ride" && t.ride !== "train";
+    const stride = riding ? 0 : Math.min(1, Math.abs(t.speed) / 140);
+    const airborne = !riding && (Math.abs(t.vy) > 1 || flying);
     const bob = airborne ? 0 : Math.abs(Math.sin(t.phase)) * 0.8 * stride;
-    g.position.set(t.x, t.y + bob + Math.sin(clock.elapsedTime * 2) * 0.08, t.z);
+    g.position.set(t.x, t.y + bob + Math.sin(now * 2) * 0.08, t.z);
     g.rotation.y = t.yaw;
+    // Lean into fast flight; flash when hurt in space.
+    const lean = flying ? clamp01(Math.abs(t.speed) / 3000) * 0.9 : t.gliding ? 0.35 : 0;
+    if (body.current) {
+      body.current.rotation.x += (-lean - body.current.rotation.x) * 0.15;
+      const hurt = now - runtime.explore.space.hitAt < 1;
+      body.current.visible = !hurt || Math.sin(now * 40) > 0;
+    }
     const swing = airborne ? 0.5 : Math.sin(t.phase) * 0.7 * stride;
-    rig.legL.current?.rotation.set(swing, 0, 0);
-    rig.legR.current?.rotation.set(airborne ? -0.5 : -swing, 0, 0);
-    rig.armL.current?.rotation.set(airborne ? -2.6 : -swing * 0.9, 0, 0);
-    rig.armR.current?.rotation.set(airborne ? -2.6 : swing * 0.9, 0, 0);
+    const armsUp = airborne && !flying;
+    rig.legL.current?.rotation.set(flying ? 0.15 : swing, 0, 0);
+    rig.legR.current?.rotation.set(flying ? 0.15 : airborne ? -0.5 : -swing, 0, 0);
+    rig.armL.current?.rotation.set(armsUp || t.gliding ? -2.6 : flying ? -0.25 : -swing * 0.9, 0, 0);
+    rig.armR.current?.rotation.set(armsUp || t.gliding ? -2.6 : flying ? -0.25 : swing * 0.9, 0, 0);
+
+    // Wings snap out with a little overshoot, and fold flat against the pack when landed.
+    const w = t.wings;
+    const pop = w * (1 + Math.sin(Math.min(w, 1) * Math.PI) * 0.25);
+    // In flight: a hover flutter that calms with speed, wings swept back when fast or boosting, and banking into turns.
+    const speed = clamp01(Math.abs(t.speed) / 2800);
+    const boosting = flying && t.boost > 0 ? 1 : 0;
+    const flutter = flying ? Math.sin(now * (9 + speed * 6)) * (0.18 * (1 - speed) + 0.05) : 0;
+    const sweep = flying ? speed * 0.35 + boosting * 0.3 : 0;
+    const bank = flying ? t.turn * 0.25 : 0;
+    for (const [ref, s] of [
+      [jet.wingL, -1],
+      [jet.wingR, 1],
+    ] as const) {
+      const wing = ref.current;
+      if (!wing) continue;
+      wing.scale.set(0.25 + 0.75 * pop, 1, 1);
+      wing.rotation.set(0, s * ((1 - w) * 1.2 + sweep), s * (-0.3 * w + flutter) + bank);
+    }
+    const fl = jet.flame.current;
+    if (fl) {
+      fl.visible = flying && t.fuel > 0;
+      const boost = t.boost > 0 ? 1.8 : 1;
+      fl.scale.set(1, (0.8 + Math.sin(now * 40) * 0.2) * boost, 1);
+    }
+    if (plane.current) plane.current.visible = t.gliding && !flying;
   });
 
   if (!kind) return null;
   return (
     <group ref={root} userData={{ noPick: true }}>
-      {kind === "cowboy" ? <Cowboy {...rig} /> : <Ranger {...rig} />}
+      <group ref={body}>{kind === "cowboy" ? <Cowboy {...rig} /> : <Ranger {...rig} {...jet} />}</group>
+      <group ref={plane} visible={false}>
+        <PaperPlane />
+      </group>
     </group>
   );
 }

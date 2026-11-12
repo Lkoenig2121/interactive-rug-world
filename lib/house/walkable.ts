@@ -1,3 +1,4 @@
+import { blockWalls, roofHeight } from "../town/blocks";
 import { TOWN_WALLS } from "../town/colliders";
 import { SURFACES } from "../town/config";
 import { RUG } from "../world/roads";
@@ -5,6 +6,7 @@ import {
   ANDY_ROOM,
   APERTURES,
   DOORWAYS,
+  EAVE_Y,
   EXT_Y,
   GROUND_Y,
   HOUSE,
@@ -46,6 +48,8 @@ const PORCH_STEPS = [
   { r: { x0: -900, x1: -700, z0: PORCH.z1 + 20, z1: PORCH.z1 + 35 }, h: EXT_Y + 13 },
 ];
 const PATIO: Rect = { x0: -600, x1: 400, z0: -1080, z1: -720 - SHELL };
+/** Crawl-in attic over the upstairs ceiling, reached through the vent in Andy's room. */
+export const ATTIC: Rect = { x0: HOUSE.x0 + 80, x1: HOUSE.x1 - 80, z0: HOUSE.z0 + 120, z1: HOUSE.z1 - 120 };
 const PATIO_STEP: Rect = { x0: -10, x1: 250, z0: -795, z1: HOUSE.z0 - SHELL };
 
 /** Splits the line from `lo` to `hi` around the given gaps (center and width). */
@@ -97,7 +101,10 @@ export const WALLS: WallSegment[] = [
   // Railing around the stair opening upstairs; the top of the stairs stays open.
   { ax: STAIR_VOID.x0, az: STAIR_VOID.z1, bx: STAIR_VOID.x1, bz: STAIR_VOID.z1, y0: UPPER_Y - 20, y1: UPPER_Y + 92 },
   { ax: STAIR_VOID.x0, az: STAIR_VOID.z0, bx: STAIR_VOID.x0, bz: STAIR_VOID.z1, y0: UPPER_Y - 20, y1: UPPER_Y + 92 },
+  // Low enough that you can walk across the roof above it.
+  ...boxWalls(ATTIC, EAVE_Y - 5, EAVE_Y + 50),
   ...TOWN_WALLS,
+  ...blockWalls(),
 ];
 
 /** Buckets walls into a coarse grid so the toy only tests the ones nearby. */
@@ -126,11 +133,14 @@ export const onRug = (p: { x: number; z: number }) => inRect(p, RUG_RECT);
 /** Height of the floor under a point, for something currently standing at height `y`. */
 export function groundHeight(x: number, z: number, y: number) {
   const p = { x, z };
+  const roof = roofHeight(x, z, y);
+  if (roof !== null) return Math.max(roof, surfaceHeight(p, y) ?? -Infinity);
   if (inRect(p, STAIR_VOID)) {
     const t = Math.min(1, Math.max(0, (x - STAIR_VOID.x0) / (STAIR_VOID.x1 - STAIR_VOID.x0)));
     return GROUND_Y + t * (UPPER_Y - GROUND_Y);
   }
   if (inRect(p, HOUSE)) {
+    if (y > EAVE_Y - 60 && inRect(p, ATTIC)) return EAVE_Y;
     if (y > (GROUND_Y + UPPER_Y) / 2) return onRug(p) ? 0 : UPPER_Y;
     return GROUND_Y;
   }
@@ -138,17 +148,25 @@ export function groundHeight(x: number, z: number, y: number) {
   for (const s of PORCH_STEPS) if (inRect(p, s.r)) return s.h;
   if (inRect(p, PATIO_STEP)) return EXT_Y + 35;
   if (inRect(p, PATIO)) return EXT_Y + 25;
+  const surface = surfaceHeight(p, y);
+  if (surface !== null) return surface;
+  if (Math.abs(x) > RES_STREET_HALF) return EXT_Y;
+  return EXT_Y + streetHeight(z);
+}
+
+/** Town surfaces (lofts, ramps, the sky dome floor) under a point, or null. */
+function surfaceHeight(p: { x: number; z: number }, y: number): number | null {
   for (const s of SURFACES) {
     if (!inRect(p, s.rect)) continue;
+    if (s.round && Math.hypot(p.x - s.round.x, p.z - s.round.z) > s.round.r) continue;
     if (s.ramp) {
-      const v = s.ramp.axis === "x" ? x : z;
+      const v = s.ramp.axis === "x" ? p.x : p.z;
       const t = Math.min(1, Math.max(0, (v - s.ramp.from) / (s.ramp.to - s.ramp.from)));
       return s.ramp.y0 + t * (s.y - s.ramp.y0);
     }
     if (y > s.y - STEP_HEIGHT - 20) return s.y;
   }
-  if (Math.abs(x) > RES_STREET_HALF) return EXT_Y;
-  return EXT_Y + streetHeight(z);
+  return null;
 }
 
 const RES_STREET_HALF = 18900;

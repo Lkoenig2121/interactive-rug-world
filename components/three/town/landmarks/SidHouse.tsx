@@ -2,8 +2,11 @@
 
 import type { Landmark } from "@/lib/town/config";
 import { EXT_Y } from "@/lib/house/layout";
+import { INTERIOR_SOLIDS } from "@/lib/town/interiors";
 import type { Builder } from "../builder";
-import { buildFence, buildShell, Built, LandmarkGroup, Roof } from "../parts";
+import { dressSid } from "../filmSet";
+import { buildProps } from "../interiorProps";
+import { buildFence, buildShell, Built, LandmarkGroup, Roof, Sign } from "../parts";
 import { buildDino } from "./DinoGas";
 
 const SIDING = "#857b6f";
@@ -46,7 +49,17 @@ function springBot(b: Builder, x: number, z: number) {
 function buildSid(b: Builder, l: Landmark) {
   const hw = l.w / 2;
   const hd = l.d / 2;
-  buildShell(b, l, { h: l.h, ext: { slot: "siding", color: SIDING }, int: "#5b544c", floor: { slot: "wood", color: "#6b4a2b" }, trim: TRIM });
+  buildShell(b, l, { h: l.h, ext: { slot: "siding", color: SIDING }, int: "#3f3832", floor: { slot: "wood", color: "#4a3728" }, trim: TRIM, doorH: 230 });
+  buildProps(b, INTERIOR_SOLIDS.sid, 11);
+  dressSid(b, l);
+  // Messy living room extras: pizza boxes, a lamp, stairs to the dark upstairs.
+  b.use("paint").box(-40, 50, 90, 70, 8, 70, "#c0392b");
+  b.use("paint").box(-10, 58, 70, 70, 8, 70, "#f4d35e");
+  b.use("wood").box(620, 0, -200, 220, 18, 900, "#6b4a2b");
+  for (let i = 0; i < 8; i++) b.use("wood").box(620, 18 + i * 22, -200 - i * 28, 220, 18, 90, i % 2 ? "#5b4330" : "#6b4a2b");
+  b.use("paint").box(620, 200, -480, 220, 8, 80, "#3a2a22");
+  b.use("metal").cyl(-600, 0, 200, 8, 140, "#3b4148", 8);
+  b.use("glow").sphere(-600, 150, 200, 18, "#fff3b0", 1, 8);
   // Windows with dark drawn curtains, one boarded up.
   for (const [x, y] of [
     [-450, 120],
@@ -60,8 +73,7 @@ function buildSid(b: Builder, l: Landmark) {
     b.use("paint").box(x, y - 14, hd + 12, 250, 14, 10, TRIM);
   }
   b.use("planks").cbox(0, 600, hd + 14, 260, 30, 4, "#8a6a45", { rz: 0.4 }).cbox(0, 600, hd + 15, 260, 30, 4, "#8a6a45", { rz: -0.3 });
-  // Front door and sagging steps.
-  b.use("paint").box(-50, 0, hd + 9, 110, 230, 6, "#3a2a22");
+  // Sagging steps up to the open front door.
   b.use("concrete").box(-50, 0, hd + 80, 260, 22, 140, "#8f8a80");
   b.use("concrete").cbox(-50, 30, hd + 170, 220, 14, 60, "#8f8a80", { rx: 0.08 });
   // Garage with a dented door, and a basketball hoop with a torn net.
@@ -100,6 +112,33 @@ function buildSid(b: Builder, l: Landmark) {
   spiderDoll(b, 300, by - 1100, 1);
   legTruck(b, -200, by - 900);
   springBot(b, 650, by - 300);
+  // Cage in the far yard: the rescue beat. Open toward the house (+z).
+  const cx = 80;
+  const cz = -1250;
+  b.use("planks").box(cx, 0, cz, 110, 10, 110, "#6b4a2b");
+  for (const [dx, dz] of [
+    [-48, -48],
+    [48, -48],
+    [-48, 48],
+    [48, 48],
+  ])
+    b.use("wood").box(cx + dx, 10, cz + dz, 10, 78, 10, "#5b4330");
+  for (let i = 0; i < 6; i++) {
+    const x = cx - 45 + i * 18;
+    b.use("metal").box(x, 10, cz - 50, 3, 72, 3, "#9aa3ad");
+  }
+  for (let i = 0; i < 6; i++) {
+    const z = cz - 45 + i * 18;
+    b.use("metal").box(cx - 50, 10, z, 3, 72, 3, "#9aa3ad");
+    b.use("metal").box(cx + 50, 10, z, 3, 72, 3, "#9aa3ad");
+  }
+  b.use("planks").box(cx, 88, cz, 116, 8, 116, "#5b4330");
+  b.use("paint").box(cx, 40, cz + 58, 80, 36, 4, "#7a1f1f");
+  // Work lamp aimed at the cage.
+  b.use("metal").cyl(cx + 90, 0, cz + 80, 6, 160, "#3b4148", 8);
+  b.use("metal").cbox(cx + 70, 155, cz + 40, 16, 8, 70, "#3b4148", { rx: 0.5 });
+  b.use("glow").sphere(cx + 50, 148, cz + 10, 10, "#fff3b0", 1, 8);
+  b.use("planks").cbox(-hw - 40, 40, -hd - 20, 8, 160, 220, "#8a6a45", { ry: 0.15 });
   b.at(-700, 0, by - 600, 0.6, () => {
     buildDino(b, 0, 10, 0, 0.18, "#7a8a5a");
     for (const [dx, dz] of [
@@ -164,6 +203,7 @@ export function SidHouse({ l }: { l: Landmark }) {
             }}
           />
         </Roof>
+        <Sign text="KEEP OUT" position={[-20, 150, -l.d / 2 - 30]} size={[240, 72]} bg="#7a1f1f" fg="#f4f1ea" rotationY={Math.PI} />
       </LandmarkGroup>
       <group position={[0, EXT_Y, 0]}>
         <Built build={buildAndyYard} />

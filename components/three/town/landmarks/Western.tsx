@@ -51,6 +51,30 @@ function mesa(b: Builder, x: number, z: number, w: number, h: number, seed: numb
   }
 }
 
+/** Railroad line along the back of town (local z). */
+export const TRAIN_Z = 4650;
+/** Height of the first carriage roof above the lawn, where riders sit. */
+export const TRAIN_ROOF = 410;
+
+/** Steam locomotive and two carriages at the origin, facing local +z, wheels on the rails. */
+export function buildTrain(b: Builder) {
+  b.use("metal").cyl(0, 230, 200, 110, 600, "#2b2f36", 16, 110, { rx: Math.PI / 2 });
+  b.use("gloss").box(0, 120, -250, 260, 380, 300, "#7a2e2e");
+  b.use("gloss").box(0, 500, -250, 300, 20, 340, "#2b2f36");
+  b.use("metal").cyl(0, 340, 420, 40, 200, "#2b2f36", 12, 70);
+  b.use("metal").cone(0, 330, 560, 120, 60, "#c0392b", 4);
+  b.use("glow").sphere(0, 300, 505, 26, "#fff3b0", 1, 10);
+  b.use("metal").box(0, 40, 100, 220, 60, 800, "#1d1d1f");
+  for (const z of [-200, 0, 250, 450]) for (const s of [-1, 1]) b.use("gloss").rod(s * 115, 70, z, z === 0 || z === 250 ? 80 : 50, 14, "#c0392b", 0, 16);
+  for (let k = 0; k < 2; k++) {
+    const cz = -900 - k * 1000;
+    b.use("planks").box(0, 60, cz, 280, 300, 860, k ? "#c08a3e" : "#7a2e2e");
+    b.use("wood").box(0, 360, cz, 320, 20, 900, "#3b2412");
+    for (let w = -300; w <= 300; w += 150) b.use("glass").box(141, 200, cz + w, 3, 90, 90, "#f6e7c1").box(-141, 200, cz + w, 3, 90, 90, "#f6e7c1");
+    for (const z of [-300, 300]) for (const s of [-1, 1]) b.use("paint").rod(s * 115, 50, cz + z, 45, 14, "#2b2f36", 0, 14);
+  }
+}
+
 function buildWestern(b: Builder, l: Landmark) {
   const r = seededRandom(1958);
   b.use("dirt").box(0, 0, 0, l.w, 1, l.d, SAND);
@@ -92,28 +116,11 @@ function buildWestern(b: Builder, l: Landmark) {
     b.use("metal").box(0, 920, -100, 6, 60, 160, "#c0392b");
   });
 
-  // Railroad along the back, a locomotive and two cars waiting at the station.
-  const tz = 4650;
+  // Railroad along the back; the train itself runs up and down it (see Rides).
+  const tz = TRAIN_Z;
   b.use("dirt").box(0, 0, tz, l.w, 12, 380, "#9c8a6a");
   for (let x = -l.w / 2; x < l.w / 2; x += 90) b.use("wood").box(x, 12, tz, 30, 8, 300, "#5b3417");
   for (const s of [-1, 1]) b.use("metal").box(0, 20, tz + s * 72, l.w, 10, 8, "#5c6773");
-  b.at(-1200, 30, tz, Math.PI / 2, () => {
-    b.use("metal").cyl(0, 230, 200, 110, 600, "#2b2f36", 16, 110, { rx: Math.PI / 2 });
-    b.use("gloss").box(0, 120, -250, 260, 380, 300, "#7a2e2e");
-    b.use("gloss").box(0, 500, -250, 300, 20, 340, "#2b2f36");
-    b.use("metal").cyl(0, 340, 420, 40, 200, "#2b2f36", 12, 70);
-    b.use("metal").cone(0, 330, 560, 120, 60, "#c0392b", 4);
-    b.use("glow").sphere(0, 300, 505, 26, "#fff3b0", 1, 10);
-    b.use("metal").box(0, 40, 100, 220, 60, 800, "#1d1d1f");
-    for (const z of [-200, 0, 250, 450]) for (const s of [-1, 1]) b.use("gloss").rod(s * 115, 70, z, z === 0 || z === 250 ? 80 : 50, 14, "#c0392b", 0, 16);
-    for (let k = 0; k < 2; k++) {
-      const cz = -900 - k * 1000;
-      b.use("planks").box(0, 60, cz, 280, 300, 860, k ? "#c08a3e" : "#7a2e2e");
-      b.use("wood").box(0, 360, cz, 320, 20, 900, "#3b2412");
-      for (let w = -300; w <= 300; w += 150) b.use("glass").box(141, 200, cz + w, 3, 90, 90, "#f6e7c1").box(-141, 200, cz + w, 3, 90, 90, "#f6e7c1");
-      for (const z of [-300, 300]) for (const s of [-1, 1]) b.use("paint").rod(s * 115, 50, cz + z, 45, 14, "#2b2f36", 0, 14);
-    }
-  });
 
   // Corral with a trough, hay and two horses.
   const corral = landmarkById.corral;

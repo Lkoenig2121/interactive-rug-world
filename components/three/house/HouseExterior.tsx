@@ -22,6 +22,8 @@ import {
 } from "@/lib/house/layout";
 import { runtime } from "@/lib/runtime";
 import { useStore } from "@/lib/store";
+import { landmarkById } from "@/lib/town/config";
+import { Enterable } from "./HouseEnterTargets";
 import { mat } from "@/lib/three/materials";
 import { brickTexture, concreteTexture, garageDoorTexture, shingleTexture, sidingTexture } from "@/lib/three/textures";
 import { seededRandom } from "@/lib/world/geometry";
@@ -585,15 +587,17 @@ export function HouseExterior() {
   });
   return (
     <group>
-      <group ref={shell}>
-        <Facades />
-        {trims}
-        <TrimBands />
-        <Roofs />
-        <Chimney />
-        <Porch />
-      </group>
-      <Garage />
+      <Enterable l={landmarkById.andy} world>
+        <group ref={shell}>
+          <Facades />
+          {trims}
+          <TrimBands />
+          <Roofs />
+          <Chimney />
+          <Porch />
+        </group>
+        <Garage />
+      </Enterable>
       <Yard />
     </group>
   );

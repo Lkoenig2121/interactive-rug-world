@@ -264,6 +264,65 @@ export function buildProps(b: Builder, props: PropBox[], seed = 1) {
         for (let k = 0; k < 3; k++)
           for (let t = -d / 2 + 70; t < d / 2; t += 140) b.use("gloss").box(x + w / 2 - 20, 15 + k * 45, z + t, 40, 30, 110, BRIGHT[Math.floor(r() * BRIGHT.length)]);
         break;
+      case "couch":
+        b.use("paint").box(x, 0, z, w, 38, d, "#5c4033");
+        b.use("paint").box(x, 38, z, w, 16, d, "#6b4a3a");
+        b.use("paint").box(x, 38, z - d / 2 + 12, w, 52, 24, "#6b4a3a");
+        b.use("paint").box(x - w / 2 + 16, 38, z, 28, 40, d, "#5c4033");
+        b.use("paint").box(x + w / 2 - 16, 38, z, 28, 40, d, "#5c4033");
+        break;
+      case "tv":
+        b.use("wood").box(x, 0, z, w + 20, 50, d, "#3b2a1a");
+        b.use("paint").box(x, 50, z, w, h - 50, 16, "#1d1d1f");
+        b.use("glow").box(x, 58, z + 10, w - 16, h - 70, 2, "#4a5d3a");
+        break;
+      case "table":
+        b.use("wood").box(x, h - 8, z, w, 8, d, "#7a4a24");
+        for (const [dx, dz] of [
+          [-1, -1],
+          [1, -1],
+          [-1, 1],
+          [1, 1],
+        ])
+          b.use("wood").box(x + dx * (w / 2 - 12), 0, z + dz * (d / 2 - 12), 12, h - 8, 12, "#5b3417");
+        break;
+      case "workbench":
+        b.use("wood").box(x, 0, z, w, h - 8, d, "#5b4330");
+        b.use("metal").box(x, h - 8, z, w + 8, 8, d + 8, "#9aa3ad");
+        break;
+      case "kitchen":
+        b.use("paint").box(x, 0, z, w, h - 8, d, "#4a4038");
+        b.use("metal").box(x, h - 8, z, w + 8, 8, d + 8, "#6b6359");
+        break;
+      case "booth": {
+        const color = r() > 0.5 ? "#d62828" : "#2ec4b6";
+        b.use("gloss").box(x, 0, z, w, h, d, color);
+        b.use("gloss").box(x, h, z - d / 2 + 8, w, 70, 16, color);
+        b.use("gloss").box(x - w / 2 + 10, 0, z, 20, 160, d, color);
+        b.use("gloss").box(x + w / 2 - 10, 0, z, 20, 160, d, color);
+        b.use("paint").box(x, 72, z + 10, w * 0.6, 4, d * 0.6, "#f3ead8");
+        break;
+      }
+      case "rangerwall":
+        b.use("paint").box(x, 0, z, w, h, d, "#1b3a6e");
+        break;
+      case "ballpit":
+        b.use("paint").cyl(x, 0, z, w / 2, 16, "#ff8fab", 20);
+        break;
+      case "recliner":
+        b.use("gloss").box(x, 0, z, w, 40, d, "#8e44ad");
+        break;
+      case "craft":
+        b.use("wood").box(x, 0, z, w, h, d, "#e8d5b0");
+        break;
+      case "cooler":
+        b.use("gloss").box(x, 0, z, w, h, d, "#1f5fbf");
+        b.use("glass").box(x, 30, z + d / 2 + 1, w - 20, h - 50, 2, "#9be7ff");
+        break;
+      case "incinerator":
+        b.use("metal").box(x, 0, z, w, h, d, "#4f5b66");
+        b.use("glow").box(x, 40, z + d / 2 - 4, w * 0.7, h * 0.65, 8, "#ff7a3d");
+        break;
       default:
         b.use("paint").box(x, 0, z, w, h, d, "#a0a0a0");
     }

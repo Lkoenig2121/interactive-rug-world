@@ -3,6 +3,7 @@
 import type { Landmark } from "@/lib/town/config";
 import { INTERIOR_SOLIDS, TOY_AISLES } from "@/lib/town/interiors";
 import type { Builder } from "../builder";
+import { dressBarn } from "../filmSet";
 import { buildProps } from "../interiorProps";
 import { buildCars, buildLamp, buildParking, buildShell, Built, LandmarkGroup, Roof, Sign } from "../parts";
 
@@ -167,6 +168,7 @@ export function buildToyHorse(b: Builder, x: number, z: number, s = 1, color = "
 
 function buildInterior(b: Builder, l: Landmark) {
   buildProps(b, INTERIOR_SOLIDS.toybarn, 21);
+  dressBarn(b, l);
   // Giant toys on top of the gondolas and hanging banners.
   b.use("gloss").sphere(-2700, 430, -700, 70, "#8b5a2b", 1.1, 14);
   b.use("gloss").sphere(-2700, 520, -700, 48, "#8b5a2b", 1, 14);
@@ -200,6 +202,8 @@ export function BigBarnToys({ l }: { l: Landmark }) {
           <Sign key={p.x} text={TOY_AISLES[i]} position={[p.x, 470, p.z + p.d / 2 + 4]} size={[520, 90]} bg={["#e63946", "#457b9d", "#1b1b3a", "#8b5a2b", "#2a9d8f", "#8e44ad"][i]} fg="#ffffff" glow />
         ))}
       <Sign text="ROUNDUP COLLECTION" position={[0, 300, -1700 + 260]} size={[800, 110]} bg="#8b5a2b" fg="#ffc300" border="#ffc300" glow />
+      <Sign text="SPACE RANGERS" position={[-1600, 360, -hd + 50]} size={[700, 80]} bg="#1b3a6e" fg="#ffc300" glow />
+      <Sign text="COWBOY CORRAL" position={[1800, 280, -hd + 50]} size={[520, 70]} bg="#8b5a2b" fg="#f6e7c1" />
     </LandmarkGroup>
   );
 }

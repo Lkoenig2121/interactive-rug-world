@@ -1,7 +1,9 @@
 "use client";
 
+import { districtProgress } from "@/lib/explore/stars";
 import { useStore } from "@/lib/store";
-import { landmarkById } from "@/lib/town/config";
+import { DISTRICTS, landmarkById } from "@/lib/town/config";
+import { missionStep } from "@/lib/town/missions";
 import { DESTINATIONS } from "@/lib/town/navigation";
 import { Icon } from "./Icon";
 import { formatDistance } from "./NavigationPanel";
@@ -26,6 +28,7 @@ export function TownNavigation() {
   const start = useStore((s) => s.startTownNavigation);
   const stop = useStore((s) => s.stopTownNavigation);
   const setTravel = useStore((s) => s.setTravel);
+  const missionLandmark = missionStep(useStore((s) => s.missionId))?.landmark;
   if (!open) return null;
   const dest = destId ? landmarkById[destId] : null;
   const picks = DESTINATIONS.filter((l) => HIGHLIGHT.has(l.id));
@@ -106,11 +109,14 @@ export function TownNavigation() {
               <button
                 key={l.id}
                 onClick={() => setDest(l.id)}
-                className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2 text-left text-sm hover:bg-blue-50 hover:ring-1 hover:ring-blue-200"
+                className={`flex items-center gap-3 rounded-xl px-3 py-2 text-left text-sm hover:bg-blue-50 hover:ring-1 hover:ring-blue-200 ${l.id === missionLandmark ? "bg-amber-50 ring-1 ring-amber-300" : "bg-slate-50"}`}
               >
                 <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: l.district === "andy" ? "#8cc97a" : "#3b82f6" }} />
                 <span>
-                  <span className="block font-semibold text-slate-800">{l.name}</span>
+                  <span className="block font-semibold text-slate-800">
+                    {l.name}
+                    {l.id === missionLandmark ? <span className="ml-2 text-[10px] font-bold uppercase tracking-wide text-amber-700">Rescue</span> : null}
+                  </span>
                   <span className="block text-[11px] text-slate-500">{l.blurb}</span>
                 </span>
               </button>
@@ -170,10 +176,18 @@ export function TownDirections() {
 export function PlaceBadge() {
   const place = useStore((s) => s.place);
   const mode = useStore((s) => s.mode);
+  const stars = useStore((s) => s.stars);
   if (mode !== "toy" || !place?.district) return null;
+  const district = DISTRICTS.find((d) => d.name === place.district);
+  const progress = district ? districtProgress(district.id, new Set(stars)) : null;
   return (
     <div className="pointer-events-none rounded-full bg-slate-900/55 px-3 py-1 text-[11px] font-medium text-white/90 backdrop-blur">
       {place.landmark ? `${place.landmark} · ${place.district}` : place.district}
+      {progress && (
+        <span className={`ml-2 font-bold ${progress.got === progress.total ? "text-emerald-300" : "text-amber-300"}`}>
+          ★ {progress.got}/{progress.total} explored
+        </span>
+      )}
     </div>
   );
 }

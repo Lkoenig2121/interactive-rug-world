@@ -1,9 +1,17 @@
 import { create } from "zustand";
-import { EXT_Y } from "./house/layout";
+import type { WorldEvent } from "./explore/events";
+import { loadProgress, saveProgress } from "./explore/progress";
+import { STARS_FOR_SKY, STARS_FOR_SPACE } from "./explore/sky";
+import { SPACE_SPAWN } from "./explore/space";
+import { starById, STARS } from "./explore/stars";
+import { EXPLORE_EYE, houseFloorAt, placeById, placeCenter } from "./house/doors";
+import { EXT_Y, GROUND_Y } from "./house/layout";
 import { groundHeight } from "./house/walkable";
 import { currentOrigin, poseOnRoad, resetCar, resetPlayer, runtime, type Mount } from "./runtime";
-import { landmarkById } from "./town/config";
-import { planTownRoute, type TownRoute } from "./town/navigation";
+import { doorInside, landmarkById, toWorld } from "./town/config";
+import { landmarkFloor } from "./town/colliders";
+import { isMissionId, MISSION_STORAGE_KEY, missionStep, nextMission, type MissionId } from "./town/missions";
+import { landmarkContaining, planTownRoute, type TownRoute } from "./town/navigation";
 import { buildingById, poseInFrontOf } from "./world/buildings";
 import { pointInsideAnyBox, worldColliders } from "./world/colliders";
 import { dist, yawToRight } from "./world/geometry";
@@ -16,6 +24,7 @@ export type Mode = "room" | "transition" | "overhead" | "walk" | "drive" | "inte
 export type WorldMode = "walk" | "drive";
 export type ToyKind = "ranger" | "cowboy";
 export type ArcadeGame = "invaders" | "blasters";
+export type { MissionId };
 
 export type Selection =
   | { kind: "building"; id: string }
@@ -34,6 +43,7 @@ export interface CameraCommand {
   id: number;
   kind: "zoomIn" | "zoomOut" | "reset" | "look";
   lookAt?: { x: number; y: number; z: number };
+  lookFrom?: { x: number; y: number; z: number };
 }
 
 export interface Hud {
@@ -91,12 +101,26 @@ interface State {
   arrowPicker: string[] | null;
   /** Pizza Planet cabinet currently filling the screen. */
   arcadeGame: ArcadeGame | null;
+  /** Rescue quest: Sid's backyard, then the film landmarks, then home. */
+  missionId: MissionId;
+  /** Exploration: collected star ids, ring-course best, boss beaten, events finished. */
+  stars: string[];
+  ringBest: number | null;
+  bossDefeated: boolean;
+  eventsDone: number;
+  worldEvent: WorldEvent | null;
+  isNight: boolean;
+  /** Rocket countdown in progress, and whether the toy is on the space level. */
+  launching: boolean;
+  inSpace: boolean;
 
   setHovered: (id: string | null) => void;
   select: (s: Selection) => void;
   cameraCmd: (kind: CameraCommand["kind"], lookAt?: { x: number; y: number; z: number }) => void;
   /** Jump the explore camera into a room (from the neighborhood view if needed). */
   lookRoom: (lookAt: { x: number; y: number; z: number }) => void;
+  /** Click-to-enter a neighborhood building (Andy, Sid, Pizza Planet, etc.). */
+  enterLandmark: (id: string) => void;
 
   enterWorld: (opts?: { buildingId?: string; at?: Vec2; mode?: WorldMode }) => void;
   completeFlight: () => void;
@@ -109,6 +133,8 @@ interface State {
   /** Drops the chosen toy at a point in the house or neighborhood and flies to it. */
   spawnToy: (p: { x: number; y: number; z: number }, facing: number) => void;
   goToToy: () => void;
+  /** Leaves toy mode for the free explore camera, framed on wherever the toy is right now. */
+  exploreHere: () => void;
   /** Back from Carpet World: to the toy if one is out, otherwise the room view. */
   returnHome: () => void;
   setWalk: () => void;
@@ -146,8 +172,33 @@ interface State {
   setArrowPicker: (ids: string[] | null) => void;
   openArcade: (game: ArcadeGame) => void;
   closeArcade: () => void;
+  beginMission: () => void;
+  completeMissionStep: () => void;
+  hydrateMission: () => void;
   /** Fades out, moves the toy, and fades back in (doors, fast travel). */
   teleportToy: (p: { x: number; y: number; z: number }, yaw: number, toast?: string) => void;
+
+  hydrateExplore: () => void;
+  collectStar: (id: string) => void;
+  finishRings: (seconds: number) => void;
+  setWorldEvent: (e: WorldEvent | null) => void;
+  completeEvent: (toast: string) => void;
+  setNight: (night: boolean) => void;
+  /** Starts the rocket countdown at Pizza Planet (once space is unlocked). */
+  launchRocket: () => void;
+  enterSpace: () => void;
+  /** Back from space to the Pizza Planet launch pad. */
+  exitSpace: () => void;
+  defeatBoss: () => void;
+}
+
+/** Space opens after the rescue, or for anyone who has found enough stars. */
+export const spaceUnlocked = (s: { missionId: MissionId; stars: string[] }) => s.missionId === "done" || s.stars.length >= STARS_FOR_SPACE;
+
+/** Where the toy lands back from space: beside the Pizza Planet rocket pad. */
+export function launchPad() {
+  const l = landmarkById.pizza;
+  return toWorld(l, -l.w / 2 - 900, l.d / 2 + 700);
 }
 
 /** Andy's front walk: where town routes start before a toy is out, and where one is dropped for navigation. */
@@ -159,6 +210,25 @@ let toastId = 0;
 
 function releasePointer() {
   if (typeof document !== "undefined" && document.pointerLockElement) document.exitPointerLock();
+}
+
+function loadMission(): MissionId {
+  if (typeof window === "undefined") return "idle";
+  try {
+    const raw = window.localStorage.getItem(MISSION_STORAGE_KEY);
+    if (raw && isMissionId(raw)) return raw;
+  } catch {
+    /* ignore */
+  }
+  return "idle";
+}
+
+function persistMission(id: MissionId) {
+  try {
+    window.localStorage.setItem(MISSION_STORAGE_KEY, id);
+  } catch {
+    /* ignore */
+  }
 }
 
 /** Whether rug buildings, roads and the rug itself respond to hover, clicks and double-clicks. */
@@ -189,6 +259,20 @@ export const useStore = create<State>((set, get) => {
       fn();
       window.setTimeout(() => set({ fading: false }), 120);
     }, 380);
+  };
+  /** Leaving toy mode from space puts the toy back on the launch pad. */
+  const dropSpace = () => {
+    runtime.explore.launchAt = null;
+    if (!get().inSpace && !get().launching) return;
+    if (get().inSpace) {
+      const p = launchPad();
+      Object.assign(runtime.toy, { x: p.x, y: EXT_Y, z: p.z, vy: 0, speed: 0, mount: "none" });
+    }
+    set({ inSpace: false, launching: false, mount: "none" });
+  };
+  const persist = () => {
+    const s = get();
+    saveProgress({ stars: s.stars, ringBest: s.ringBest, bossDefeated: s.bossDefeated, eventsDone: s.eventsDone });
   };
 
   return {
@@ -225,6 +309,15 @@ export const useStore = create<State>((set, get) => {
     townMapOpen: false,
     arrowPicker: null,
     arcadeGame: null,
+    missionId: "idle",
+    stars: [],
+    ringBest: null,
+    bossDefeated: false,
+    eventsDone: 0,
+    worldEvent: null,
+    isNight: false,
+    launching: false,
+    inSpace: false,
 
     setHovered: (id) => set({ hoveredId: id }),
     select: (selection) => set({ selection }),
@@ -238,9 +331,65 @@ export const useStore = create<State>((set, get) => {
         arrowPicker: null,
       });
     },
+    enterLandmark: (id) => {
+      if (id === "andy") {
+        if (get().mode === "toy") {
+          get().teleportToy({ x: -800, y: groundHeight(-800, 400, GROUND_Y), z: 400 }, 0, "Inside Andy's house");
+          return;
+        }
+        const foyer = placeById("foyer");
+        if (foyer) get().lookRoom(placeCenter(foyer));
+        return;
+      }
+      const l = landmarkById[id];
+      if (!l) return;
+      if (get().mode === "toy") {
+        const p = doorInside(l, Math.min(280, l.d * 0.35));
+        get().teleportToy({ x: p.x, y: landmarkFloor(l), z: p.z }, l.rot, `Inside ${l.name}`);
+        return;
+      }
+      const from = doorInside(l, Math.min(420, l.d * 0.28));
+      const at = toWorld(l, l.door?.offset ?? 0, -Math.min(l.d * 0.2, 400));
+      const y = landmarkFloor(l) + EXPLORE_EYE;
+      set({
+        mode: "house",
+        flight: null,
+        arrowPicker: null,
+        cameraCommand: {
+          id: ++commandId,
+          kind: "look",
+          lookAt: { x: at.x, y, z: at.z },
+          lookFrom: { x: from.x, y, z: from.z },
+        },
+      });
+    },
     setArrowPicker: (arrowPicker) => set({ arrowPicker }),
     openArcade: (arcadeGame) => set({ arcadeGame, townAutopilot: false, interaction: null }),
     closeArcade: () => set({ arcadeGame: null }),
+
+    hydrateMission: () => {
+      const id = loadMission();
+      if (id !== get().missionId) set({ missionId: id });
+    },
+    beginMission: () => {
+      if (get().missionId !== "idle" && get().missionId !== "done") return;
+      persistMission("sid-rescue");
+      set({ missionId: "sid-rescue" });
+      get().setTownDestination("sid");
+      get().showToast("A toy is trapped next door. Check the neighbor's backyard.");
+    },
+    completeMissionStep: () => {
+      const cur = get().missionId;
+      const step = missionStep(cur);
+      const next = nextMission(cur);
+      persistMission(next);
+      set({ missionId: next });
+      if (step) get().showToast(step.doneToast);
+      if (next !== "done") {
+        const nxt = missionStep(next);
+        if (nxt) get().setTownDestination(nxt.landmark);
+      }
+    },
 
     enterWorld: (opts = {}) => {
       const next: WorldMode = opts.mode ?? runtime.lastWorldMode;
@@ -274,6 +423,7 @@ export const useStore = create<State>((set, get) => {
 
     goToRoom: () => {
       releasePointer();
+      dropSpace();
       set({
         mode: "transition",
         flight: { id: ++flightId, kind: "room" },
@@ -291,6 +441,7 @@ export const useStore = create<State>((set, get) => {
 
     goOverhead: () => {
       releasePointer();
+      dropSpace();
       set({
         mode: "transition",
         flight: { id: ++flightId, kind: "overhead" },
@@ -306,6 +457,7 @@ export const useStore = create<State>((set, get) => {
 
     goOutside: () => {
       releasePointer();
+      dropSpace();
       set({
         mode: "transition",
         flight: { id: ++flightId, kind: "house" },
@@ -327,9 +479,17 @@ export const useStore = create<State>((set, get) => {
     spawnToy: (p, facing) => {
       const kind = get().spawning;
       if (!kind) return;
-      Object.assign(runtime.toy, { x: p.x, y: p.y, z: p.z, vy: 0, speed: 0, yaw: facing, camYaw: facing, mount: "none" });
+      get().hydrateMission();
+      get().hydrateExplore();
+      Object.assign(runtime.toy, { x: p.x, y: p.y, z: p.z, vy: 0, speed: 0, yaw: facing, camYaw: facing, mount: "none", fuel: 1, gliding: false, ride: null });
       set({ toy: kind, spawning: null, mount: "none", travel: "walk" });
       get().recomputeTownRoute();
+      const mission = get().missionId;
+      if (mission === "idle") get().beginMission();
+      else if (mission !== "done") {
+        const step = missionStep(mission);
+        if (step) get().setTownDestination(step.landmark);
+      }
       get().goToToy();
     },
 
@@ -347,6 +507,47 @@ export const useStore = create<State>((set, get) => {
         hoveredId: null,
         navPanelOpen: false,
         hud: null,
+      });
+    },
+
+    exploreHere: () => {
+      const t = runtime.toy;
+      if (!get().toy || get().inSpace || get().launching) {
+        get().goToRoom();
+        return;
+      }
+      releasePointer();
+      if (t.mount === "ride") get().setMount("none");
+      const common = { flight: null, arrowPicker: null, spawning: null, townAutopilot: false, interaction: null, selection: null, hoveredId: null, arcadeGame: null };
+      // Inside Andy's house: the room view, locked to whichever room the toy is in.
+      if (houseFloorAt(t) !== null) {
+        set({ ...common, mode: "room", cameraCommand: { id: ++commandId, kind: "look", lookAt: { x: t.x, y: t.y + EXPLORE_EYE, z: t.z } } });
+        return;
+      }
+      // Inside a town building: stand at eye height a little behind the toy, like clicking to enter.
+      const inside = landmarkContaining(t);
+      const back = { x: Math.sin(t.camYaw), z: Math.cos(t.camYaw) };
+      if (inside) {
+        const y = landmarkFloor(inside) + EXPLORE_EYE;
+        set({
+          ...common,
+          mode: "house",
+          cameraCommand: { id: ++commandId, kind: "look", lookAt: { x: t.x, y, z: t.z }, lookFrom: { x: t.x + back.x * 350, y, z: t.z + back.z * 350 } },
+        });
+        return;
+      }
+      // Outdoors: orbit view looking down at the toy from behind.
+      const pitch = Math.max(0.5, t.camPitch);
+      const dist = 1400;
+      set({
+        ...common,
+        mode: "house",
+        cameraCommand: {
+          id: ++commandId,
+          kind: "look",
+          lookAt: { x: t.x, y: t.y, z: t.z },
+          lookFrom: { x: t.x + back.x * Math.cos(pitch) * dist, y: t.y + Math.sin(pitch) * dist, z: t.z + back.z * Math.cos(pitch) * dist },
+        },
       });
     },
 
@@ -538,6 +739,70 @@ export const useStore = create<State>((set, get) => {
         if (toast) get().showToast(toast);
         if (get().townDestination) get().recomputeTownRoute();
       });
+    },
+
+    hydrateExplore: () => {
+      const p = loadProgress();
+      set({ stars: p.stars, ringBest: p.ringBest, bossDefeated: p.bossDefeated, eventsDone: p.eventsDone });
+    },
+    collectStar: (id) => {
+      const s = get();
+      if (s.stars.includes(id)) return;
+      const stars = [...s.stars, id];
+      set({ stars });
+      persist();
+      const n = stars.length;
+      if (n === STARS_FOR_SKY) get().showToast(`Star ${n}! Jetpack upgraded: fly high enough to reach the sky dome.`);
+      else if (n === STARS_FOR_SPACE && s.missionId !== "done") get().showToast(`Star ${n}! The Pizza Planet rocket is ready for launch.`);
+      else get().showToast(`Star collected: ${starById[id]?.label ?? id} (${n}/${STARS.length})`);
+    },
+    finishRings: (seconds) => {
+      const best = get().ringBest;
+      const record = best === null || seconds < best;
+      if (record) set({ ringBest: seconds });
+      persist();
+      get().showToast(record ? `New ring record: ${seconds.toFixed(1)} s!` : `Ring course: ${seconds.toFixed(1)} s (best ${best!.toFixed(1)} s)`);
+    },
+    setWorldEvent: (worldEvent) => set({ worldEvent }),
+    completeEvent: (toast) => {
+      set({ worldEvent: null, eventsDone: get().eventsDone + 1 });
+      persist();
+      get().showToast(toast);
+    },
+    setNight: (isNight) => {
+      if (get().isNight !== isNight) set({ isNight });
+    },
+    launchRocket: () => {
+      if (get().launching || get().inSpace) return;
+      runtime.explore.launchAt = runtime.town.clock;
+      set({ launching: true, interaction: null, townAutopilot: false, townNavigating: false });
+      get().showToast("Countdown started. Hold on tight!");
+    },
+    enterSpace: () => {
+      fade(() => {
+        Object.assign(runtime.explore.space, { hearts: 3, bossHp: get().bossDefeated ? 0 : 12, hitAt: -99, bossHitAt: -99, shots: [] });
+        Object.assign(runtime.toy, { ...SPACE_SPAWN, vy: 0, speed: 0, yaw: Math.PI, camYaw: Math.PI, mount: "none", fuel: 1, gliding: false, ride: null });
+        runtime.explore.launchAt = null;
+        runtime.town.snapCamera = true;
+        set({ inSpace: true, launching: false, mount: "none" });
+        get().showToast("Welcome to Planet Zurbo! Low gravity: jump high. Q or click fires your laser.");
+      });
+    },
+    exitSpace: () => {
+      fade(() => {
+        const p = launchPad();
+        Object.assign(runtime.toy, { x: p.x, y: EXT_Y, z: p.z, vy: 0, speed: 0, yaw: 0, camYaw: 0, mount: "none", gliding: false, ride: null });
+        runtime.explore.launchAt = null;
+        runtime.town.snapCamera = true;
+        set({ inSpace: false, launching: false, mount: "none" });
+        get().showToast("Splashdown at Pizza Planet!");
+      });
+    },
+    defeatBoss: () => {
+      if (get().bossDefeated) return;
+      set({ bossDefeated: true });
+      persist();
+      get().showToast("Baron Voltrix is beaten! The planet's critters are free.");
     },
   };
 });

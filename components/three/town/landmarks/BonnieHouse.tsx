@@ -3,6 +3,7 @@
 import type { Landmark } from "@/lib/town/config";
 import { INTERIOR_SOLIDS, PARTITIONS } from "@/lib/town/interiors";
 import type { Builder } from "../builder";
+import { dressBonnie } from "../filmSet";
 import { buildProps } from "../interiorProps";
 import { buildCar, buildFence, buildShell, buildTree, Built, LandmarkGroup, Roof, Sign } from "../parts";
 import { buildToyHorse } from "./BigBarnToys";
@@ -76,6 +77,7 @@ function buildToyRoom(b: Builder, l: Landmark) {
     b.use("paint").cbox((p.ax + p.bx) / 2, l.h / 2, (p.az + p.bz) / 2, 12, l.h, len, "#fdf3e1");
   }
   buildProps(b, INTERIOR_SOLIDS.bonnie, 3);
+  dressBonnie(b, l);
   // Toy room: bright rug, bed, shelves full of toys, a tea party table and drawings on the wall.
   b.use("paint").cyl(-400, 1, 50, 300, 1, "#ff8fab", 32);
   b.use("wood").box(-700, 0, 300, 300, 50, 500, "#f4a261");

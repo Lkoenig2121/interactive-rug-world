@@ -8,6 +8,7 @@ import { runtime } from "@/lib/runtime";
 import { landmarkById, PLANE_FLOOR, type Landmark } from "@/lib/town/config";
 import { INTERIOR_SOLIDS } from "@/lib/town/interiors";
 import type { Builder } from "../builder";
+import { dressAirport, dressPlane } from "../filmSet";
 import { buildProps } from "../interiorProps";
 import { buildCars, buildFlatRoof, buildLamp, buildParking, buildShell, buildTree, Built, LandmarkGroup, Roof, Sign } from "../parts";
 
@@ -39,6 +40,7 @@ function buildTerminal(b: Builder, l: Landmark) {
   for (let x = -3200; x <= 3200; x += 800) b.use("paint").box(x, 2.2, hd + 800, 300, 0.5, 12, "#f4f4f0");
   // Inside: check-in, carousel, gate seating, departure board, shops and plants.
   buildProps(b, INTERIOR_SOLIDS.terminal, 11);
+  dressAirport(b, l);
   b.use("paint").box(-3000, 0, -900, 4600, 260, 30, NAVY);
   b.use("metal").box(0, 500, 300, 1600, 280, 30, "#1f2933");
   for (let r = 0; r < 6; r++) b.use("glow").box(0, 520 + r * 42, 316, 1500, 26, 2, r % 2 ? "#ffd166" : "#f8fafc");
@@ -140,6 +142,7 @@ function buildJetLower(b: Builder, l: Landmark) {
   // Cabin: seats from the shared layout, galley and cockpit.
   b.at(0, 160, 0, 0, () => {
     buildProps(b, INTERIOR_SOLIDS.plane, 2);
+    dressPlane(b, l);
     b.use("metal").box(1500, 0, -120, 250, 110, 80, "#c0c7cf");
     b.use("paint").box(1800, 0, 0, 120, 70, 200, "#2b2f36");
     b.use("glow").box(1840, 70, 0, 40, 30, 160, "#4cc9f0");
@@ -262,6 +265,7 @@ export function Airport({ l }: { l: Landmark }) {
         <Sign text="GATES 1-12" position={[0, 480, -hd + 22]} size={[700, 110]} rotationY={0} bg={NAVY} fg="#ffffff" glow />
         <Sign text="CHECK-IN" position={[-3000, 300, -884]} size={[600, 90]} bg="#ffffff" fg={NAVY} />
         <Sign text="BAGGAGE CLAIM" position={[2600, 430, 0]} size={[700, 90]} bg="#ffc300" fg={NAVY} glow doubleSided />
+        <Sign text="FLIGHT 2  TOKYO" position={[0, 700, 318]} size={[900, 70]} bg="#1f2933" fg="#57ff8f" glow />
       </LandmarkGroup>
       <Carousel l={l} />
       <LandmarkGroup l={plane}>

@@ -3,6 +3,7 @@
 import type { Landmark } from "@/lib/town/config";
 import { INTERIOR_SOLIDS, PARTITIONS } from "@/lib/town/interiors";
 import type { Builder } from "../builder";
+import { dressDaycare } from "../filmSet";
 import { buildProps, buildTableSet } from "../interiorProps";
 import { buildCars, buildFence, buildFlatRoof, buildParking, buildShell, buildTree, Built, LandmarkGroup, Roof, Sign } from "../parts";
 import { buildBench, buildBlocks, buildRocketClimber, buildSandbox, buildSeesaw, buildSlide, buildSwings } from "./playKit";
@@ -48,6 +49,7 @@ function buildDaycare(b: Builder, l: Landmark) {
   }
   for (const x of [-2000, 2000]) b.use("gloss").box(x, 200, 607, 200, 20, 4, x < 0 ? "#8e44ad" : "#3ddc97");
   buildProps(b, INTERIOR_SOLIDS.daycare, 5);
+  dressDaycare(b, l);
 
   // Butterfly Room (west): rug, tables, a reading corner.
   b.use("paint").box(-2000, 1, -600, 1600, 1, 1700, "#d8c7f0");

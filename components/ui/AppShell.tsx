@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect } from "react";
 import { runtime } from "@/lib/runtime";
 import { useStore } from "@/lib/store";
+import { missionObjective } from "@/lib/town/missions";
 import { ControlsHelp, Crosshair, DirectionsBanner, FadeOverlay, InteractionPrompt, InteriorHeader, PointerHint, Speedometer, Toast, TouchControls } from "./Hud";
 import { Icon } from "./Icon";
 import { InfoPanel } from "./InfoPanel";
@@ -11,6 +12,7 @@ import { NavigationPanel } from "./NavigationPanel";
 import { PlaceBadge, TownDirections, TownNavigation } from "./TownNavigation";
 import { ArcadeCabinet } from "./ArcadeCabinet";
 import { ArrowPicker } from "./ArrowPicker";
+import { EventChip, ExploreStatus, LaunchCountdown } from "./ExploreHud";
 import { HouseToolbar, RoomToolbar, ToyToolbar, WorldDock } from "./Toolbars";
 
 const Experience = dynamic(() => import("@/components/three/Experience"), {
@@ -66,7 +68,8 @@ function useKeyboard() {
           else if (s.mode === "drive") s.setWalk();
           else if (s.mode === "interior") s.exitInterior();
           else if (s.mode === "overhead") s.returnHome();
-          else if (s.mode === "house" || s.mode === "toy") s.goToRoom();
+          else if (s.mode === "toy") s.exploreHere();
+          else if (s.mode === "house") s.goToRoom();
           else if (s.mode === "room") s.select(null);
           break;
       }
@@ -86,6 +89,10 @@ function useKeyboard() {
 
 function Brand() {
   const mode = useStore((s) => s.mode);
+  const toy = useStore((s) => s.toy);
+  const missionId = useStore((s) => s.missionId);
+  const objective = missionObjective(missionId, !!toy);
+  const done = missionId === "done";
   const label: Record<string, string> = {
     room: "Room view",
     transition: "Travelling…",
@@ -97,13 +104,14 @@ function Brand() {
     toy: "Playing as a toy",
   };
   return (
-    <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-white/85 py-2 pl-2 pr-4 shadow-xl ring-1 ring-black/5 backdrop-blur-xl">
-      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-blue-600 text-white shadow-inner">
+    <div className="pointer-events-auto flex max-w-sm items-start gap-3 rounded-2xl bg-white/85 py-2 pl-2 pr-4 shadow-xl ring-1 ring-black/5 backdrop-blur-xl">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-emerald-500 to-blue-600 text-white shadow-inner">
         <Icon name="layers" className="h-5 w-5" />
       </div>
-      <div className="leading-tight">
+      <div className="min-w-0 leading-tight">
         <div className="text-sm font-bold tracking-tight text-slate-900">Carpet World Explorer</div>
-        <div className="text-[11px] font-medium text-slate-500">{label[mode]}</div>
+        <div className={`mt-0.5 text-[11px] font-semibold leading-snug ${done ? "text-emerald-700" : "text-amber-800"}`}>{objective}</div>
+        <div className="mt-0.5 text-[10px] font-medium text-slate-500">{label[mode]}</div>
       </div>
     </div>
   );
@@ -125,6 +133,10 @@ function SpawnHint() {
 
 export function AppShell() {
   useKeyboard();
+  useEffect(() => {
+    useStore.getState().hydrateMission();
+    useStore.getState().hydrateExplore();
+  }, []);
   const mode = useStore((s) => s.mode);
   const inWorld = mode === "walk" || mode === "drive" || mode === "overhead" || mode === "interior";
 
@@ -142,6 +154,7 @@ export function AppShell() {
         <div className="flex flex-col items-center gap-2">
           {mode === "interior" ? <InteriorHeader /> : mode === "toy" ? <TownDirections /> : <DirectionsBanner />}
           <PlaceBadge />
+          <EventChip />
           <Toast />
         </div>
         <div className="hidden sm:block">
@@ -150,7 +163,7 @@ export function AppShell() {
       </div>
 
       {/* Left column: details & navigation */}
-      <div className="pointer-events-none absolute left-3 top-20 flex flex-col gap-3 sm:left-4 sm:top-24">
+      <div className="pointer-events-none absolute left-3 top-24 flex flex-col gap-3 sm:left-4 sm:top-28">
         <InfoPanel />
         {mode === "toy" ? <TownNavigation /> : mode !== "interior" && mode !== "transition" && mode !== "house" && <NavigationPanel />}
       </div>
@@ -164,7 +177,7 @@ export function AppShell() {
         {mode === "toy" && (
           <>
             <p className="pointer-events-none hidden rounded-full bg-slate-900/50 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur sm:block">
-              W/S to walk · A/D to turn · N for the town map · F to fly · H to ride · click the rug to shrink into Carpet World
+              W/S to walk · A/D to turn · double-tap Space to fly · hold Space while falling to glide · E to use · N for the map · T skips time
             </p>
             <ToyToolbar />
           </>
@@ -188,6 +201,7 @@ export function AppShell() {
       </div>
 
       <div className="pointer-events-none absolute bottom-3 left-3 flex items-end gap-3 sm:bottom-4 sm:left-4">
+        <ExploreStatus />
         <Speedometer />
         <TouchControls />
       </div>
@@ -198,6 +212,7 @@ export function AppShell() {
         </div>
       )}
 
+      <LaunchCountdown />
       <FadeOverlay />
       <ArcadeCabinet />
     </main>

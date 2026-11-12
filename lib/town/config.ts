@@ -1,3 +1,4 @@
+import { DOME, TOWER_STEP_SIZE, TOWER_STEPS } from "../explore/sky";
 import { EXT_Y, STREET, STREET_SPACING } from "../house/layout";
 import type { Vec2 } from "../world/types";
 
@@ -230,7 +231,7 @@ const area = (d: Def): Landmark => ({ enterable: false, solid: false, destinatio
 
 export const LANDMARKS: Landmark[] = [
   L({ id: "andy", name: "Andy's House", district: "andy", kind: "andy", x: -400, z: -100, rot: R0, w: 1700, d: 1240, h: 1100, enterable: false, solid: false, blurb: "Home of the Carpet World rug, upstairs in Andy's room." }),
-  L({ id: "sid", name: "Sid's House", district: "andy", kind: "sid", x: 2150, z: -80, rot: R0, w: 1500, d: 1150, h: 900, enterable: false, blurb: "The neighbor's house. Peek over the fence at the strange toys out back." }),
+  L({ id: "sid", name: "Sid's House", district: "andy", kind: "sid", x: 2150, z: -80, rot: R0, w: 1500, d: 1150, h: 900, door: { offset: -50, width: 120 }, backDoor: { offset: 0, width: 120 }, blurb: "The neighbor's house. Peek over the fence at the strange toys out back." }),
   L({ id: "pizza", name: "Pizza Planet", district: "pizza", kind: "pizza", x: 31000, z: 25500, rot: R180, w: 5000, d: 3800, h: 900, door: { offset: 0, width: 420 }, blurb: "Space-themed pizza restaurant and arcade, with a rocket out front." }),
   L({ id: "toybarn", name: "Al's Toy Barn", district: "toystore", kind: "toybarn", x: 51500, z: 11000, rot: R180, w: 9000, d: 6000, h: 1250, door: { offset: 0, width: 600 }, blurb: "The biggest toy store in Tri-County, inside a giant red barn." }),
   L({ id: "dino", name: "Dinoco", district: "commercial", kind: "dino", x: 28000, z: 5400, rot: R180, w: 1500, d: 1000, h: 430, door: { offset: 300, width: 150 }, blurb: "Classic 1950s gas station with a friendly dinosaur sign." }),
@@ -316,7 +317,22 @@ export interface Surface {
   rect: Box2;
   y: number;
   ramp?: { axis: "x" | "z"; from: number; to: number; y0: number };
+  /** Round floors: only the part of `rect` within this circle counts. */
+  round?: { x: number; z: number; r: number };
 }
+
+/** Axis-aligned world rect covering a landmark-local rect. */
+export function localRect(l: Landmark, x0: number, z0: number, x1: number, z1: number): Box2 {
+  const pts = [toWorld(l, x0, z0), toWorld(l, x1, z0), toWorld(l, x0, z1), toWorld(l, x1, z1)];
+  return { x0: Math.min(...pts.map((p) => p.x)), x1: Math.max(...pts.map((p) => p.x)), z0: Math.min(...pts.map((p) => p.z)), z1: Math.max(...pts.map((p) => p.z)) };
+}
+
+/** Sid's upstairs bedroom floor and the Toy Barn's ceiling duct, reached through vents. */
+export const SID_UPSTAIRS_Y = EXT_Y + 430;
+export const BARN_DUCT_Y = EXT_Y + 1000;
+export const BARN_DUCT = { x0: -4300, x1: 1900, z0: -2900, z1: -2700 };
+/** Sid's attic loft over the back half of the house. */
+export const SID_LOFT = { x0: -740, x1: 740, z0: -565, z1: -100 };
 
 const plane = landmarkById.plane;
 export const PLANE_FLOOR = EXT_Y + 160;
@@ -328,4 +344,15 @@ export const SURFACES: Surface[] = [
     y: PLANE_FLOOR,
     ramp: { axis: "z", from: planeDoor.z - 480, to: planeDoor.z, y0: EXT_Y },
   },
+  { rect: localRect(landmarkById.sid, SID_LOFT.x0, SID_LOFT.z0, SID_LOFT.x1, SID_LOFT.z1), y: SID_UPSTAIRS_Y },
+  { rect: localRect(landmarkById.toybarn, BARN_DUCT.x0, BARN_DUCT.z0, BARN_DUCT.x1, BARN_DUCT.z1), y: BARN_DUCT_Y },
+  {
+    rect: { x0: DOME.x - DOME.r, x1: DOME.x + DOME.r, z0: DOME.z - DOME.r, z1: DOME.z + DOME.r },
+    y: DOME.y,
+    round: { x: DOME.x, z: DOME.z, r: DOME.r },
+  },
+  ...TOWER_STEPS.map((s) => ({
+    rect: { x0: s.x - TOWER_STEP_SIZE / 2, x1: s.x + TOWER_STEP_SIZE / 2, z0: s.z - TOWER_STEP_SIZE / 2, z1: s.z + TOWER_STEP_SIZE / 2 },
+    y: s.y,
+  })),
 ];

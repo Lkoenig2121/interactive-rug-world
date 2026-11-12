@@ -3,10 +3,12 @@
 import { useFrame } from "@react-three/fiber";
 import { useRef } from "react";
 import * as THREE from "three";
+import { rocketRise } from "@/lib/explore/space";
 import { runtime } from "@/lib/runtime";
 import type { Landmark } from "@/lib/town/config";
 import { INTERIOR_SOLIDS } from "@/lib/town/interiors";
 import type { Builder } from "../builder";
+import { dressPizza, buildAlien } from "../filmSet";
 import { buildProps, buildTableSet } from "../interiorProps";
 import { buildCars, buildLamp, buildParking, buildShell, Built, LandmarkGroup, Roof, Sign } from "../parts";
 
@@ -14,20 +16,6 @@ const RED = "#d62828";
 const YELLOW = "#ffc300";
 const CREAM = "#f3ead8";
 const TEAL = "#2ec4b6";
-
-/** Little green three-eyed alien. */
-export function buildAlien(b: Builder, x: number, y: number, z: number, s = 1, ry = 0) {
-  b.at(x, y, z, ry, () => {
-    b.use("gloss").cyl(0, 0, 0, 14 * s, 26 * s, "#3fbf3f", 12, 10 * s);
-    b.use("gloss").sphere(0, 40 * s, 0, 18 * s, "#7ee36d", 1.15, 14);
-    b.use("gloss").cyl(0, 58 * s, 0, 2 * s, 18 * s, "#7ee36d", 6);
-    b.use("gloss").sphere(0, 78 * s, 0, 4 * s, "#7ee36d", 1, 8);
-    for (const ex of [-8, 0, 8]) {
-      b.use("paint").sphere(ex * s, 46 * s, 15 * s, 4.5 * s, "#ffffff", 1, 8);
-      b.use("paint").sphere(ex * s, 46 * s, 19 * s, 2.2 * s, "#111111", 1, 6);
-    }
-  });
-}
 
 /** A retro rocket standing on its fins. */
 function buildRocket(b: Builder, x: number, z: number, h: number) {
@@ -82,7 +70,6 @@ function buildExterior(b: Builder, l: Landmark) {
   const rx = -hw - 900;
   const rz = hd + 200;
   b.use("concrete").cyl(rx, 0, rz, 380, 24, "#c5c0b6", 24);
-  buildRocket(b, rx, rz, 3200);
   buildGantry(b, rx - 520, rz, 2400);
   b.use("metal").cyl(hw - 200, 0, hd + 3600, 50, 1800, "#9aa3ad", 12);
   b.use("metal").cyl(hw - 900, 0, hd + 3600, 50, 1800, "#9aa3ad", 12);
@@ -124,6 +111,7 @@ function buildInterior(b: Builder, l: Landmark) {
   const hw = l.w / 2;
   const hd = l.d / 2;
   buildProps(b, INTERIOR_SOLIDS.pizza, 7);
+  dressPizza(b, l);
   for (let row = 0; row < 3; row++) for (let col = 0; col < 4; col++) buildTableSet(b, -1050 + col * 700, -500 + row * 520, CREAM, col % 2 ? RED : TEAL);
   // Starry inner walls and hanging planets.
   for (let i = 0; i < 80; i++) {
@@ -151,6 +139,10 @@ function buildInterior(b: Builder, l: Landmark) {
   // Entrance rug and a rocket ride.
   b.use("paint").box(0, 1, hd - 300, 600, 1, 500, "#3a0ca3");
   buildRocket(b, -1900, -100, 380);
+  // Token pedestal — Squeak's lost prize.
+  b.use("gloss").cyl(-1400, 0, 400, 28, 8, "#c0c7cf", 16);
+  b.use("gloss").cyl(-1400, 8, 400, 18, 18, RED, 16);
+  b.use("glow").cyl(-1400, 26, 400, 16, 2, YELLOW, 16);
 }
 
 /** Claw that drops and lifts when the hotspot is used. */
@@ -209,6 +201,41 @@ function ArcadeGlow() {
   );
 }
 
+/** The big rocket out front: lifts off on a column of fire when you launch to space. */
+function LaunchRocket({ l }: { l: Landmark }) {
+  const ref = useRef<THREE.Group>(null);
+  const fire = useRef<THREE.Group>(null);
+  const rx = -l.w / 2 - 900;
+  const rz = l.d / 2 + 200;
+  useFrame(({ clock }) => {
+    const g = ref.current;
+    if (!g) return;
+    const at = runtime.explore.launchAt;
+    const age = at === null ? -1 : clock.elapsedTime - at;
+    const shake = age > 3 && age < 6 ? Math.sin(clock.elapsedTime * 60) * 6 : 0;
+    g.position.set(rx + shake, age < 0 ? 0 : rocketRise(age), rz);
+    if (fire.current) {
+      fire.current.visible = age > 3;
+      fire.current.scale.set(1, 0.8 + Math.sin(clock.elapsedTime * 30) * 0.2 + Math.max(0, age - 5) * 0.3, 1);
+    }
+  });
+  return (
+    <group ref={ref} position={[rx, 0, rz]}>
+      <Built deps={["launch-rocket"]} build={(b) => buildRocket(b, 0, 0, 3200)} />
+      <group ref={fire} visible={false}>
+        <mesh position={[0, -500, 0]} rotation-x={Math.PI}>
+          <coneGeometry args={[220, 1400, 16, 1, true]} />
+          <meshBasicMaterial color="#ffb347" transparent opacity={0.8} toneMapped={false} depthWrite={false} />
+        </mesh>
+        <mesh position={[0, -200, 0]} rotation-x={Math.PI}>
+          <coneGeometry args={[150, 800, 16, 1, true]} />
+          <meshBasicMaterial color="#fff3b0" transparent opacity={0.9} toneMapped={false} depthWrite={false} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
 /** Sweeping cones of light over the parking lot. */
 function Searchlights({ l }: { l: Landmark }) {
   const a = useRef<THREE.Group>(null);
@@ -253,6 +280,8 @@ export function PizzaOrbit({ l }: { l: Landmark }) {
       <Claw />
       <ArcadeGlow />
       <Searchlights l={l} />
+      <LaunchRocket l={l} />
+      <Sign text="LAUNCH PAD · PRESS E" position={[-l.w / 2 - 900, 140, hd + 200 + 400]} size={[700, 110]} bg="#1b1b3a" fg="#ffc300" glow doubleSided />
       <Roof l={l}>
         <Built deps={[l.id]} build={buildSaucer} />
       </Roof>
@@ -260,6 +289,7 @@ export function PizzaOrbit({ l }: { l: Landmark }) {
       <Sign text="PIZZA PLANET" position={[l.w / 2 - 550, 1450, hd + 3600]} size={[1400, 280]} bg="#1b1b3a" fg="#3ddc84" border={YELLOW} glow doubleSided />
       <Sign text="DRIVE-THRU" position={[l.w / 2 + 450, 500, l.d / 2 + 500]} size={[500, 110]} bg={TEAL} fg="#ffffff" glow doubleSided />
       <Sign text="ARCADE · PIZZA · PRIZES" position={[0, 600, -hd + 34]} size={[1700, 140]} bg="#1b1b3a" fg="#57ff8f" glow />
+      <Sign text="THE CLAW" position={[1900, 300, 900]} size={[420, 70]} bg="#1b1b3a" fg="#ffc300" glow doubleSided />
     </LandmarkGroup>
   );
 }

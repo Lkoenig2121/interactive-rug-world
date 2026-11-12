@@ -8,6 +8,7 @@ import { labelTexture, type LabelOptions } from "@/lib/three/textures";
 import { runtime } from "@/lib/runtime";
 import { useStore } from "@/lib/store";
 import { insideLandmark, type Landmark } from "@/lib/town/config";
+import { Enterable, isEnterableBuilding } from "../house/HouseEnterTargets";
 import { Builder, slotMaterial, type Slot } from "./builder";
 
 /** Merged meshes produced by a builder function (rebuilt only when `deps` change). */
@@ -38,9 +39,10 @@ export function Built({ build, deps = [], castShadow = true, receiveShadow = tru
 
 /** Group placed at a landmark's footprint, in its local space (front faces +z, y = 0 at the lawn). */
 export function LandmarkGroup({ l, children, y = EXT_Y }: { l: Landmark; children: ReactNode; y?: number }) {
+  const content = isEnterableBuilding(l) ? <Enterable l={l}>{children}</Enterable> : children;
   return (
     <group position={[l.x, y, l.z]} rotation-y={l.rot}>
-      {children}
+      {content}
     </group>
   );
 }
