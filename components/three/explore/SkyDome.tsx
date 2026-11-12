@@ -46,6 +46,7 @@ function buildCase(b: Builder) {
 const glass = new THREE.MeshStandardMaterial({ color: "#d8f1ff", transparent: true, opacity: 0.13, roughness: 0.05, metalness: 0.1, side: THREE.DoubleSide, depthWrite: false });
 const goldStar = new THREE.MeshStandardMaterial({ color: "#ffd23f", emissive: "#ffb300", emissiveIntensity: 0.6, metalness: 0.5, roughness: 0.3 });
 const ghostStar = new THREE.MeshStandardMaterial({ color: "#7a7f87", transparent: true, opacity: 0.35, roughness: 0.8 });
+const plaqueBox = new THREE.MeshStandardMaterial({ color: BRASS, metalness: 0.6, roughness: 0.35 });
 
 function Rings() {
   const mats = useMemo(() => RINGS.map(() => new THREE.MeshBasicMaterial({ color: "#4cc9f0", transparent: true, opacity: 0.5, toneMapped: false })), []);
@@ -96,8 +97,20 @@ function Display() {
       {STARS.map((s, i) => {
         const a = (i / STARS.length) * Math.PI * 2;
         const got = stars.includes(s.id);
+        // Little plaque on the front of each pedestal, facing the middle of the dome.
+        const pr = DISPLAY_RADIUS - 72;
         return (
-          <mesh key={s.id} geometry={starGeometry()} material={got ? goldStar : ghostStar} position={[Math.sin(a) * DISPLAY_RADIUS, 190, Math.cos(a) * DISPLAY_RADIUS]} rotation-y={a} scale={90} raycast={() => null} />
+          <group key={s.id}>
+            <mesh geometry={starGeometry()} material={got ? goldStar : ghostStar} position={[Math.sin(a) * DISPLAY_RADIUS, 190, Math.cos(a) * DISPLAY_RADIUS]} rotation-y={a} scale={90} raycast={() => null} />
+            {got && (
+              <group position={[Math.sin(a) * pr, 70, Math.cos(a) * pr]} rotation-y={a + Math.PI}>
+                <mesh material={plaqueBox} position={[0, 0, -5]} raycast={() => null}>
+                  <boxGeometry args={[240, 74, 10]} />
+                </mesh>
+                <Sign text={s.label} position={[0, 0, 0.6]} size={[224, 60]} bg="#2b1a0e" fg="#ffd23f" />
+              </group>
+            )}
+          </group>
         );
       })}
       {ringBest !== null && (

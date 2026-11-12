@@ -175,19 +175,22 @@ export function groundHeight(x: number, z: number, y: number) {
   return EXT_Y + streetHeight(z);
 }
 
-/** Town surfaces (lofts, ramps, the sky dome floor) under a point, or null. */
+/** Highest town surface (lofts, ramps, the sky dome floor and its stairs) you can stand on at a point, or null. */
 function surfaceHeight(p: { x: number; z: number }, y: number): number | null {
+  let best: number | null = null;
   for (const s of SURFACES) {
     if (!inRect(p, s.rect)) continue;
     if (s.round && Math.hypot(p.x - s.round.x, p.z - s.round.z) > s.round.r) continue;
+    let h: number;
     if (s.ramp) {
       const v = s.ramp.axis === "x" ? p.x : p.z;
       const t = Math.min(1, Math.max(0, (v - s.ramp.from) / (s.ramp.to - s.ramp.from)));
-      return s.ramp.y0 + t * (s.y - s.ramp.y0);
-    }
-    if (y > s.y - STEP_HEIGHT - 20) return s.y;
+      h = s.ramp.y0 + t * (s.y - s.ramp.y0);
+    } else if (y > s.y - STEP_HEIGHT - 20) h = s.y;
+    else continue;
+    if (best === null || h > best) best = h;
   }
-  return null;
+  return best;
 }
 
 const RES_STREET_HALF = 18900;
