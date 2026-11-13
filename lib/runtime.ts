@@ -65,6 +65,13 @@ export const runtime = {
     },
     /** Live poses of the traffic cars (model yaw, +z forward). */
     traffic: [] as { x: number; z: number; yaw: number }[],
+    /** Where the neighbors (and the dog) are right now, or null while they're at home; for the radar. */
+    people: {
+      mail: null as { x: number; z: number } | null,
+      walker: null as { x: number; z: number } | null,
+      dog: null as { x: number; z: number } | null,
+      kids: null as { x: number; z: number } | null,
+    },
     /** Weather: what is scheduled, and how much rain, wind and falling snow there is right now (0..1). */
     weather: {
       kind: "clear" as "clear" | "rain" | "wind" | "snow",

@@ -387,6 +387,12 @@ export function Neighbors() {
 
     // Kids ride single file round the sidewalks; the bikes bump toys out of the way like cars do.
     const ride = neighborPose("kids", hour, now);
+
+    const people = runtime.explore.people;
+    people.mail = mail;
+    people.walker = walk;
+    people.kids = ride;
+    people.dog = dg?.visible && d.placed ? { x: d.x, z: d.z } : null;
     if (kids.current) {
       kids.current.visible = !!ride;
       if (ride) {
