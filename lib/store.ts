@@ -77,6 +77,8 @@ interface State {
   fading: boolean;
   interaction: Interaction | null;
   toast: { id: number; text: string } | null;
+  /** Mission and story messages waiting to be read; each stays up until Enter (or a click). */
+  messages: { id: number; text: string }[];
   hud: Hud | null;
   speed: number;
   pointerLocked: boolean;
@@ -164,6 +166,8 @@ interface State {
 
   setInteraction: (i: Interaction | null) => void;
   showToast: (text: string) => void;
+  showMessage: (text: string) => void;
+  dismissMessage: () => void;
   setPointerLocked: (v: boolean) => void;
   setNavPanelOpen: (v: boolean) => void;
   setMapExpanded: (v: boolean) => void;
@@ -307,6 +311,7 @@ export const useStore = create<State>((set, get) => {
     fading: false,
     interaction: null,
     toast: null,
+    messages: [],
     hud: null,
     speed: 0,
     pointerLocked: false,
@@ -410,7 +415,7 @@ export const useStore = create<State>((set, get) => {
       persistMission("sid-rescue");
       set({ missionId: "sid-rescue" });
       get().setTownDestination("sid");
-      get().showToast("A toy is trapped next door. Check the neighbor's backyard.");
+      get().showMessage("A toy is trapped next door. Check the neighbor's backyard.");
     },
     completeMissionStep: () => {
       const cur = get().missionId;
@@ -418,7 +423,7 @@ export const useStore = create<State>((set, get) => {
       const next = nextMission(cur);
       persistMission(next);
       set({ missionId: next });
-      if (step) get().showToast(step.doneToast);
+      if (step) get().showMessage(step.doneToast);
       if (next !== "done") {
         const nxt = missionStep(next);
         if (nxt) get().setTownDestination(nxt.landmark);
@@ -705,10 +710,22 @@ export const useStore = create<State>((set, get) => {
     toggleInterior: (id) => set((s) => ({ interiorToggles: { ...s.interiorToggles, [id]: !s.interiorToggles[id] } })),
 
     setInteraction: (interaction) => {
-      if (get().interaction?.label === interaction?.label) return;
+      const current = get().interaction;
+      if (current && interaction && current.label === interaction.label) {
+        // Same prompt: keep the object (no re-render) but always run the latest action.
+        current.action = interaction.action;
+        return;
+      }
+      if (current === interaction) return;
       set({ interaction });
     },
     showToast: (text) => set({ toast: { id: ++toastId, text } }),
+    showMessage: (text) => {
+      const queue = get().messages;
+      if (queue.some((m) => m.text === text)) return;
+      set({ messages: [...queue, { id: ++toastId, text }].slice(-5) });
+    },
+    dismissMessage: () => set({ messages: get().messages.slice(1) }),
     setPointerLocked: (pointerLocked) => set({ pointerLocked }),
     setNavPanelOpen: (navPanelOpen) => set({ navPanelOpen }),
     setMapExpanded: (mapExpanded) => set({ mapExpanded }),
@@ -786,8 +803,8 @@ export const useStore = create<State>((set, get) => {
       set({ stars });
       persist();
       const n = stars.length;
-      if (n === STARS_FOR_SKY) get().showToast(`Star ${n}! Jetpack upgraded: fly high enough to reach the sky dome.`);
-      else if (n === STARS_FOR_SPACE && s.missionId !== "done") get().showToast(`Star ${n}! The Pizza Planet rocket is ready for launch.`);
+      if (n === STARS_FOR_SKY) get().showMessage(`Star ${n}! Jetpack upgraded: fly high enough to reach the sky dome.`);
+      else if (n === STARS_FOR_SPACE && s.missionId !== "done") get().showMessage(`Star ${n}! The Pizza Planet rocket is ready for launch.`);
       else get().showToast(`Star collected: ${starById[id]?.label ?? id} (${n}/${STARS.length})`);
     },
     finishRings: (seconds) => {
@@ -802,7 +819,7 @@ export const useStore = create<State>((set, get) => {
       const kind = get().worldEvent?.kind;
       set({ worldEvent: null, eventsDone: get().eventsDone + 1 });
       persist();
-      get().showToast(toast);
+      get().showMessage(toast);
       const friend = FRIENDS.find((f) => f.event === kind);
       if (friend) get().findFriend(friend.id);
     },
@@ -818,7 +835,7 @@ export const useStore = create<State>((set, get) => {
       if (!c) return;
       set({ cutscene: null });
       const following = get().friends.length - get().friendsHome.length;
-      get().showToast(`${friendById[c.friendId]?.name ?? "Your new friend"} is following you${following > 1 ? ` (with ${following - 1} other${following > 2 ? "s" : ""})` : ""}. Bring them home to Andy's room!`);
+      get().showMessage(`${friendById[c.friendId]?.name ?? "Your new friend"} is following you${following > 1 ? ` (with ${following - 1} other${following > 2 ? "s" : ""})` : ""}. Bring them home to Andy's room!`);
     },
     deliverFriends: () => {
       const s = get();
@@ -829,7 +846,7 @@ export const useStore = create<State>((set, get) => {
       persist();
       const names = arriving.map((f) => friendById[f]?.name ?? f);
       const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names[0];
-      s.showToast(`${list} hopped onto the shelf in Andy's room! (${friendsHome.length}/${FRIENDS.length} friends home)`);
+      s.showMessage(`${list} hopped onto the shelf in Andy's room! (${friendsHome.length}/${FRIENDS.length} friends home)`);
     },
     setNight: (isNight) => {
       if (get().isNight !== isNight) set({ isNight });
@@ -847,7 +864,7 @@ export const useStore = create<State>((set, get) => {
         runtime.explore.launchAt = null;
         runtime.town.snapCamera = true;
         set({ inSpace: true, launching: false, mount: "none" });
-        get().showToast("Welcome to Planet Zurbo! Low gravity: jump high. Q or click fires your laser.");
+        get().showMessage("Welcome to Planet Zurbo! Low gravity: jump high. Q or click fires your laser.");
       });
     },
     exitSpace: () => {
@@ -864,7 +881,7 @@ export const useStore = create<State>((set, get) => {
       if (get().bossDefeated) return;
       set({ bossDefeated: true });
       persist();
-      get().showToast("Baron Voltrix is beaten! The planet's critters are free.");
+      get().showMessage("Baron Voltrix is beaten! The planet's critters are free.");
     },
   };
 });

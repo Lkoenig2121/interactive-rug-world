@@ -21,7 +21,62 @@ export interface Partition {
   az: number;
   bx: number;
   bz: number;
+  /** Wall height above the floor if it stops short of the ceiling (to let a duct pass over). */
+  h?: number;
 }
+
+/** Sunnyside's hall vending machine, against the front wall west of the door. */
+export const SUNNY_VENDING = { x: -855, z: 1735, w: 110, d: 80, h: 195 };
+/** Junk piled beside it, each a hop higher, so toys can climb to the top. */
+export const SUNNY_STEPS = [
+  { x: -590, h: 40, kind: "wastebasket" },
+  { x: -650, h: 80, kind: "gameboxes" },
+  { x: -710, h: 120, kind: "stepstool" },
+  { x: -770, h: 160, kind: "cardboard" },
+];
+export const SUNNY_STEP = { w: 60, d: 70 };
+/** Ceiling duct along the back wall, from the Butterfly Room over storage to the Caterpillar Room. */
+export const SUNNY_DUCT = { x0: -2750, x1: 2750, z0: -1730, z1: -1570, h: 470 };
+
+/** Daycare furniture drawn by the landmark itself. `len` runs along the wall; `face` is the yaw its front looks along (0 = +z). */
+export interface SunnyFurniture extends PropBox {
+  len: number;
+  depth: number;
+  face: number;
+  cols?: number;
+  rows?: number;
+}
+
+const furn = (kind: string, x: number, z: number, len: number, depth: number, h: number, face: number, extra: Partial<SunnyFurniture> = {}): SunnyFurniture => {
+  const alongX = Math.abs(Math.sin(face)) < 0.5;
+  return { kind, x, z, len, depth, h, face, w: alongX ? len : depth, d: alongX ? depth : len, ...extra };
+};
+const binShelfAt = (x: number, z: number, cols: number, rows: number, face: number) => furn("binshelf", x, z, cols * 110 + 16, 60, rows * 80 + 16, face, { cols, rows });
+
+export const SUNNY_FURNITURE: SunnyFurniture[] = [
+  // Hall, against the rooms' wall: blue bin shelving either side of each doorway.
+  binShelfAt(-2550, 640, 6, 2, 0),
+  binShelfAt(-1450, 640, 6, 2, 0),
+  binShelfAt(1450, 640, 6, 2, 0),
+  binShelfAt(2550, 640, 6, 2, 0),
+  // Hall end walls: cubby lockers with backpacks and jackets.
+  furn("lockers", -2960, 1200, 700, 60, 200, Math.PI / 2),
+  furn("lockers", 2960, 1200, 700, 60, 200, -Math.PI / 2),
+  // Sign-in counter and potted plants by the front door, a fish tank by the play area.
+  furn("counter", 650, 1700, 420, 70, 90, Math.PI),
+  furn("plant", -280, 1720, 60, 60, 120, Math.PI),
+  furn("plant", 280, 1720, 60, 60, 120, Math.PI),
+  furn("fishtank", -750, 680, 180, 60, 150, 0),
+  // Hall nooks: a book rack in the reading corner and a play kitchen.
+  furn("bookrack", -1950, 950, 200, 40, 90, 0),
+  furn("kitchen", 1950, 950, 240, 60, 110, 0),
+  // Storage: steel shelving on both side walls.
+  furn("steelshelf", -960, -1050, 700, 60, 230, Math.PI / 2),
+  furn("steelshelf", 960, -1050, 700, 60, 230, -Math.PI / 2),
+  // More bin shelving in the rooms.
+  binShelfAt(-2960, 300, 3, 2, Math.PI / 2),
+  binShelfAt(2960, -1300, 4, 2, -Math.PI / 2),
+];
 
 const row = (xs: number[], z: number, w: number, d: number, h: number, kind: string, labels?: string[]): PropBox[] =>
   xs.map((x, i) => ({ x, z, w, d, h, kind, label: labels?.[i] }));
@@ -92,6 +147,11 @@ export const INTERIOR_SOLIDS: Record<string, PropBox[]> = {
     { x: -2700, z: -1200, w: 220, d: 900, h: 140, kind: "cubbies" },
     { x: 2200, z: -200, w: 720, d: 720, h: 70, kind: "ballpit" },
     { x: -1400, z: -1400, w: 220, d: 220, h: 90, kind: "recliner" },
+    { ...SUNNY_VENDING, kind: "vending" },
+    ...SUNNY_STEPS.map((s) => ({ x: s.x, z: SUNNY_VENDING.z, w: SUNNY_STEP.w, d: SUNNY_STEP.d, h: s.h, kind: s.kind })),
+    { x: 1900, z: 1730, w: 300, d: 120, h: 220, kind: "wardrobe" },
+    { x: -2700, z: -2060, w: 240, d: 150, h: 130, kind: "dumpster" },
+    ...SUNNY_FURNITURE,
   ],
   dino: [{ x: 570, z: -420, w: 160, d: 70, h: 160, kind: "cooler" }],
   sid: [
@@ -112,8 +172,10 @@ export const PARTITIONS: Record<string, Partition[]> = {
     { ax: -1920, az: 600, bx: -1000, bz: 600 },
     { ax: 1000, az: 600, bx: 1920, bz: 600 },
     { ax: 2080, az: 600, bx: 3000, bz: 600 },
-    { ax: -1000, az: -1800, bx: -1000, bz: 600 },
-    { ax: 1000, az: -1800, bx: 1000, bz: 600 },
+    { ax: -1000, az: -1800, bx: -1000, bz: SUNNY_DUCT.z1, h: SUNNY_DUCT.h - 10 },
+    { ax: -1000, az: SUNNY_DUCT.z1, bx: -1000, bz: 600 },
+    { ax: 1000, az: -1800, bx: 1000, bz: SUNNY_DUCT.z1, h: SUNNY_DUCT.h - 10 },
+    { ax: 1000, az: SUNNY_DUCT.z1, bx: 1000, bz: 600 },
     { ax: -1000, az: -600, bx: -80, bz: -600 },
     { ax: 80, az: -600, bx: 1000, bz: -600 },
   ],

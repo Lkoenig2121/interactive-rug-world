@@ -50,7 +50,7 @@ function Scheduler() {
         d.done[id] = d.index;
         const ev = makeEvent(NEIGHBOR_EVENT[id], now, Math.random, pose);
         s.setWorldEvent(ev);
-        s.showToast(`${ev.title} ${ev.hint}`);
+        s.showMessage(`${ev.title} ${ev.hint}`);
         nextAt.current = Math.max(nextAt.current, now + EVENT_GAP[0]);
         return;
       }
@@ -61,7 +61,7 @@ function Scheduler() {
     last.current = kind;
     const ev = makeEvent(kind, now);
     s.setWorldEvent(ev);
-    s.showToast(`${ev.title} ${ev.hint}`);
+    s.showMessage(`${ev.title} ${ev.hint}`);
     nextAt.current = now + EVENT_GAP[0] + Math.random() * (EVENT_GAP[1] - EVENT_GAP[0]);
   });
   return null;

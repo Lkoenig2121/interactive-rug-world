@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { runtime } from "@/lib/runtime";
 import { useStore } from "@/lib/store";
 import { missionObjective } from "@/lib/town/missions";
-import { ControlsHelp, Crosshair, DirectionsBanner, FadeOverlay, InteractionPrompt, InteriorHeader, PointerHint, Speedometer, Toast, TouchControls } from "./Hud";
+import { ControlsHelp, Crosshair, DirectionsBanner, FadeOverlay, InteractionPrompt, InteriorHeader, MissionMessage, PointerHint, Speedometer, Toast, TouchControls } from "./Hud";
 import { Icon } from "./Icon";
 import { InfoPanel } from "./InfoPanel";
 import { NavigationPanel } from "./NavigationPanel";
@@ -13,7 +13,7 @@ import { PlaceBadge, TownDirections, TownNavigation } from "./TownNavigation";
 import { ArcadeCabinet } from "./ArcadeCabinet";
 import { ArrowPicker } from "./ArrowPicker";
 import { Cutscene } from "./Cutscene";
-import { EventChip, ExploreStatus, LaunchCountdown } from "./ExploreHud";
+import { EventChip, ExploreStatus, LaunchCountdown, SunnysideChip } from "./ExploreHud";
 import { Radar } from "./Radar";
 import { HouseToolbar, RoomToolbar, ToyToolbar, WorldDock } from "./Toolbars";
 
@@ -37,8 +37,15 @@ function useKeyboard() {
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
       const s = useStore.getState();
+      // Match the letter as well as the key position so E works on any keyboard layout.
+      const isUse = e.code === "KeyE" || e.key === "e" || e.key === "E";
+      if (isUse && !s.arcadeGame && !s.cutscene) {
+        e.preventDefault();
+        if (!e.repeat) s.interaction?.action();
+        return;
+      }
       if (s.arcadeGame) {
         if (GAME_KEYS.has(e.code) || e.code === "KeyE") e.preventDefault();
         if (e.code === "Escape" && !e.repeat) s.closeArcade();
@@ -49,15 +56,17 @@ function useKeyboard() {
         if (!e.repeat && (e.code === "Space" || e.code === "Enter" || e.code === "Escape")) s.endCutscene();
         return;
       }
+      if ((e.code === "Enter" || e.code === "NumpadEnter") && s.messages.length) {
+        e.preventDefault();
+        if (!e.repeat) s.dismissMessage();
+        return;
+      }
       const playing = s.mode === "walk" || s.mode === "drive" || s.mode === "interior" || s.mode === "toy" || s.mode === "room" || s.mode === "house" || s.mode === "overhead";
       if (playing && GAME_KEYS.has(e.code)) e.preventDefault();
       runtime.keys.add(e.code);
       if (e.repeat) return;
 
       switch (e.code) {
-        case "KeyE":
-          s.interaction?.action();
-          break;
         case "KeyF":
           if (s.mode === "walk") s.setDrive();
           else if (s.mode === "drive") s.setWalk();
@@ -83,11 +92,12 @@ function useKeyboard() {
     };
     const up = (e: KeyboardEvent) => runtime.keys.delete(e.code);
     const blur = () => runtime.keys.clear();
-    window.addEventListener("keydown", down);
+    // Capture phase, so nothing in the page can swallow the keys before the game sees them.
+    window.addEventListener("keydown", down, true);
     window.addEventListener("keyup", up);
     window.addEventListener("blur", blur);
     return () => {
-      window.removeEventListener("keydown", down);
+      window.removeEventListener("keydown", down, true);
       window.removeEventListener("keyup", up);
       window.removeEventListener("blur", blur);
     };
@@ -162,7 +172,9 @@ export function AppShell() {
           {mode === "interior" ? <InteriorHeader /> : mode === "toy" ? <TownDirections /> : <DirectionsBanner />}
           <PlaceBadge />
           <EventChip />
+          <SunnysideChip />
           <Toast />
+          <MissionMessage />
         </div>
         <div className="hidden sm:block">
           <ControlsHelp />

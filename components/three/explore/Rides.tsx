@@ -3,7 +3,7 @@
 import { useFrame } from "@react-three/fiber";
 import { useRef } from "react";
 import * as THREE from "three";
-import { TRUCK_SPEED, truckPose } from "@/lib/explore/events";
+import { truckPose, truckProgress } from "@/lib/explore/events";
 import { EXT_Y } from "@/lib/house/layout";
 import { runtime } from "@/lib/runtime";
 import { useStore } from "@/lib/store";
@@ -119,7 +119,8 @@ function GarbageTruck() {
       r.active = false;
       return;
     }
-    const pose = truckPose(Math.max(0, runtime.town.clock - e.start - 4) * TRUCK_SPEED);
+    const prog = truckProgress(runtime.town.clock - e.start);
+    const pose = truckPose(prog.d);
     g.visible = true;
     g.position.set(pose.x, EXT_Y, pose.z);
     g.rotation.y = pose.yaw;

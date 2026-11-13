@@ -4,8 +4,10 @@ import { useEffect, useRef } from "react";
 import { FRIENDS } from "@/lib/explore/friends";
 import { CAR_HALF, carLocal } from "@/lib/explore/living";
 import { STARS } from "@/lib/explore/stars";
+import { sunnyTargets, useSunny } from "@/lib/explore/sunnyside";
 import { runtime } from "@/lib/runtime";
 import { useStore } from "@/lib/store";
+import { missionStep, pickupPose } from "@/lib/town/missions";
 
 /** Radar radius in world units (30 m). */
 const RANGE = 3000;
@@ -14,6 +16,24 @@ const SIZE = 168;
 const LEVEL = 250;
 /** A car this close (and lined up with you) flashes red. */
 const DANGER = 1500;
+
+/** Pink-purple used for mission objectives. */
+const OBJECTIVE = "#e879f9";
+
+/** Current objective spots, one list per active mission (Squeak's rescue and the Sunnyside quest). */
+function objectiveTargets(): { x: number; y?: number; z: number }[][] {
+  const lists: { x: number; y?: number; z: number }[][] = [];
+  const s = useStore.getState();
+  const step = s.toy ? missionStep(s.missionId) : null;
+  if (step) {
+    const p = pickupPose(step);
+    lists.push([{ x: p.x, z: p.z, y: step.space === "room" ? undefined : p.y }]);
+  }
+  const sunny = useSunny.getState();
+  const spots = sunnyTargets(sunny.stage, sunny.outfits);
+  if (spots.length) lists.push(spots);
+  return lists;
+}
 
 function starPath(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
   ctx.beginPath();
@@ -185,7 +205,8 @@ export function Radar() {
       }
 
       // World event: a pulsing orange dot when it's in range.
-      const e = useStore.getState().worldEvent;
+      const ev = useStore.getState().worldEvent;
+      const e = ev && runtime.town.clock < ev.start + ev.duration ? ev : null;
       const eDist = e ? Math.hypot(e.x - t.x, e.z - t.z) : Infinity;
       const pulse = 0.5 + 0.5 * Math.sin(now * 5);
       if (e && eDist <= RANGE) {
@@ -202,11 +223,55 @@ export function Radar() {
         ctx.lineWidth = 1.5;
         ctx.stroke();
       }
+
+      // Mission objectives: pulsing pink-purple diamonds (the nearest out-of-range one per mission gets a rim arrow).
+      const offRadar: { x: number; z: number; d: number }[] = [];
+      for (const targets of objectiveTargets()) {
+        let nearest: { x: number; z: number; d: number } | null = null;
+        let onRadar = false;
+        for (const o of targets) {
+          const d = Math.hypot(o.x - t.x, o.z - t.z);
+          if (d > RANGE) {
+            if (!nearest || d < nearest.d) nearest = { x: o.x, z: o.z, d };
+            continue;
+          }
+          onRadar = true;
+          const p = toScreen(o.x, o.z);
+          const x = c + p.sx;
+          const y = c + p.sy;
+          const op = 0.5 + 0.5 * Math.sin(now * 4);
+          ctx.beginPath();
+          ctx.arc(x, y, 7 + op * 4, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(232, 121, 249, ${0.2 + 0.2 * (1 - op)})`;
+          ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(x, y - 7);
+          ctx.lineTo(x + 6, y);
+          ctx.lineTo(x, y + 7);
+          ctx.lineTo(x - 6, y);
+          ctx.closePath();
+          ctx.fillStyle = OBJECTIVE;
+          ctx.shadowColor = "#d946ef";
+          ctx.shadowBlur = 10;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = "#fdf4ff";
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+          if (o.y !== undefined && Math.abs(o.y - t.y) > LEVEL) {
+            ctx.fillStyle = "#f5d0fe";
+            ctx.font = "bold 8px system-ui, sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(o.y > t.y ? "▲" : "▼", x, y - 10);
+          }
+        }
+        if (nearest && !onRadar) offRadar.push(nearest);
+      }
       ctx.restore();
 
-      // Out of range: an arrow on the rim pointing toward the event, with its distance.
-      if (e && eDist > RANGE) {
-        const p = toScreen(e.x, e.z);
+      // Out of range: an arrow on the rim pointing toward it, with its distance.
+      const rimArrow = (x: number, z: number, dist: number, color: string, text: string) => {
+        const p = toScreen(x, z);
         const a = Math.atan2(p.sy, p.sx);
         const rim = R - 4;
         ctx.save();
@@ -218,7 +283,7 @@ export function Radar() {
         ctx.lineTo(-4, 0);
         ctx.lineTo(-7, 6);
         ctx.closePath();
-        ctx.fillStyle = "#ff8c42";
+        ctx.fillStyle = color;
         ctx.globalAlpha = 0.7 + 0.3 * pulse;
         ctx.fill();
         ctx.restore();
@@ -229,11 +294,13 @@ export function Radar() {
         ctx.textBaseline = "middle";
         ctx.lineWidth = 3;
         ctx.strokeStyle = "rgba(15, 23, 42, 0.85)";
-        const label = `${Math.round(eDist / 100)} m`;
+        const label = `${Math.round(dist / 100)} m`;
         ctx.strokeText(label, lx, ly);
-        ctx.fillStyle = "#fed7aa";
+        ctx.fillStyle = text;
         ctx.fillText(label, lx, ly);
-      }
+      };
+      if (e && eDist > RANGE) rimArrow(e.x, e.z, eDist, "#ff8c42", "#fed7aa");
+      for (const o of offRadar) rimArrow(o.x, o.z, o.d, OBJECTIVE, "#f5d0fe");
 
       // North marker on the rim.
       const n = toScreen(t.x, t.z - RANGE);
@@ -279,6 +346,7 @@ export function Radar() {
         <span className="text-sky-400">● people</span>
         <span className="text-green-400">● friend</span>
         <span className="text-orange-400">● event</span>
+        <span className="text-fuchsia-400">◆ objective</span>
       </span>
     </div>
   );

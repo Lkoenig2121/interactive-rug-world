@@ -94,7 +94,8 @@ export function InteractionPrompt() {
   if (!interaction || arcade) return null;
   return (
     <button
-      onClick={() => interaction.action()}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={() => useStore.getState().interaction?.action()}
       className="pointer-events-auto flex items-center gap-3 rounded-full bg-slate-900/80 py-2 pl-2 pr-5 text-sm font-semibold text-white shadow-2xl ring-1 ring-white/10 backdrop-blur-xl transition hover:bg-slate-900 animate-[panelIn_.2s_ease-out]"
     >
       <kbd className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-xs font-bold text-slate-900">E</kbd>
@@ -116,7 +117,7 @@ export function Toast() {
   const [dismissedId, setDismissedId] = useState(-1);
   useEffect(() => {
     if (!toast) return;
-    const t = window.setTimeout(() => setDismissedId(toast.id), 3200);
+    const t = window.setTimeout(() => setDismissedId(toast.id), 3200 + toast.text.length * 40);
     return () => window.clearTimeout(t);
   }, [toast]);
   const visible = toast && toast.id !== dismissedId ? toast : null;
@@ -125,6 +126,30 @@ export function Toast() {
     <div key={visible.id} className="pointer-events-none rounded-2xl bg-white/95 px-5 py-3 text-sm font-medium text-slate-800 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl animate-[panelIn_.25s_ease-out]">
       {visible.text}
     </div>
+  );
+}
+
+/** Mission and story messages: each stays up until you press Enter (or click it). */
+export function MissionMessage() {
+  const messages = useStore((s) => s.messages);
+  const dismiss = useStore((s) => s.dismissMessage);
+  const m = messages[0];
+  if (!m) return null;
+  return (
+    <button
+      key={m.id}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={dismiss}
+      className="pointer-events-auto max-w-xl rounded-2xl bg-white/95 px-5 py-3 text-left text-sm font-medium leading-relaxed text-slate-800 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl animate-[panelIn_.25s_ease-out]"
+    >
+      <span className="block">{m.text}</span>
+      <span className="mt-2 flex items-center justify-end gap-1.5 text-xs font-semibold text-slate-500">
+        {messages.length > 1 && <span className="mr-auto text-slate-400">+{messages.length - 1} more</span>}
+        Press
+        <kbd className="rounded-md bg-slate-900 px-1.5 py-0.5 text-[10px] font-bold text-white">Enter ↵</kbd>
+        to continue
+      </span>
+    </button>
   );
 }
 

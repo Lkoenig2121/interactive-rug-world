@@ -9,6 +9,8 @@ import { EXT_Y } from "@/lib/house/layout";
 import { groundHeight } from "@/lib/house/walkable";
 import { runtime } from "@/lib/runtime";
 import { spaceUnlocked, useStore } from "@/lib/store";
+import { chase, sunnyObjective, useSunny } from "@/lib/explore/sunnyside";
+import { insideLandmark, landmarkById } from "@/lib/town/config";
 
 /** Re-renders `ms` times a second with a snapshot of the mutable runtime state. */
 function useRuntime<T>(read: () => T, ms = 100) {
@@ -117,9 +119,16 @@ export function EventChip() {
   const inSpace = useStore((s) => s.inSpace);
   const left = useRuntime(() => {
     const ev = useStore.getState().worldEvent;
-    return ev ? Math.max(0, Math.round(ev.start + ev.duration - runtime.town.clock)) : 0;
-  }, 500);
-  if (mode !== "toy" || !e || inSpace) return null;
+    return ev ? Math.max(0, Math.ceil(ev.start + ev.duration - runtime.town.clock)) : 0;
+  }, 250);
+  // Once the timer runs out the event is over, even if the scene hasn't caught up yet.
+  useEffect(() => {
+    const s = useStore.getState();
+    if (mode !== "toy" || !e || left > 0 || s.worldEvent !== e || runtime.town.clock < e.start + e.duration) return;
+    s.setWorldEvent(null);
+  }, [mode, e, left]);
+  const secs = e ? Math.ceil(e.start + e.duration - runtime.town.clock) : 0;
+  if (mode !== "toy" || !e || inSpace || secs <= 0) return null;
   const go = () => {
     const s = useStore.getState();
     const t = runtime.toy;
@@ -133,11 +142,29 @@ export function EventChip() {
   return (
     <div className="pointer-events-auto flex items-center gap-3 rounded-full bg-orange-500 py-1.5 pl-4 pr-1.5 text-sm font-semibold text-white shadow-xl shadow-orange-500/30">
       <span>
-        {e.title} <span className="text-white/75">· {left}s</span>
+        {e.title} <span className="text-white/75">· {secs}s</span>
       </span>
       <button onClick={go} className="rounded-full bg-white/25 px-3 py-1 text-xs hover:bg-white/35">
         Go
       </button>
+    </div>
+  );
+}
+
+/** Sunnyside quest objective, shown while the toy is in the daycare (or chasing the bear). */
+export function SunnysideChip() {
+  const mode = useStore((s) => s.mode);
+  const stage = useSunny((s) => s.stage);
+  const outfits = useSunny((s) => s.outfits);
+  const inside = useRuntime(() => insideLandmark(landmarkById.daycare, runtime.toy, 200), 400);
+  const hits = useRuntime(() => chase.hits, 200);
+  if (mode !== "toy" || (!inside && stage !== "chase")) return null;
+  const text = sunnyObjective(stage, outfits);
+  if (!text) return <div className="rounded-full bg-emerald-500 px-4 py-1.5 text-sm font-semibold text-white shadow-xl">Sunnyside is free! ★</div>;
+  return (
+    <div className="flex max-w-md items-center gap-2 rounded-full bg-fuchsia-600 py-1.5 pl-3 pr-4 text-sm font-semibold text-white shadow-xl shadow-fuchsia-600/30" data-hits={hits}>
+      <span className="rounded-full bg-white/25 px-2 py-0.5 text-[10px] uppercase tracking-wider">Sunnyside</span>
+      <span className="leading-tight">{text}</span>
     </div>
   );
 }

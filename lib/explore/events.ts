@@ -42,6 +42,32 @@ export function garbageRoute() {
 }
 
 export const TRUCK_SPEED = 900;
+/** The truck idles at Sid's curb this long before setting off. */
+const TRUCK_WAIT = 15;
+/** Between bin stops it covers this far, then sits still for `TRUCK_STOP` seconds. */
+const TRUCK_LEG = 2400;
+const TRUCK_STOP = 7;
+/** Each leg eases in and out, so it takes longer than at full speed. */
+const LEG_TIME = (TRUCK_LEG / TRUCK_SPEED) * 1.6;
+
+/** How far along its route the truck is `age` seconds into garbage day, and whether it's stopped for bins. */
+export function truckProgress(age: number) {
+  const total = garbageRoute().total;
+  if (age < TRUCK_WAIT) return { d: 0, stopped: true };
+  const cycle = LEG_TIME + TRUCK_STOP;
+  const k = age - TRUCK_WAIT;
+  const leg = Math.floor(k / cycle);
+  const into = k - leg * cycle;
+  const f = into >= LEG_TIME ? 1 : into / LEG_TIME;
+  const d = Math.min(total, (leg + f * f * (3 - 2 * f)) * TRUCK_LEG);
+  return { d, stopped: into >= LEG_TIME || d >= total };
+}
+
+/** Seconds from the start of garbage day until the truck reaches the landfill. */
+export function truckDuration() {
+  const legs = Math.ceil(garbageRoute().total / TRUCK_LEG);
+  return TRUCK_WAIT + legs * (LEG_TIME + TRUCK_STOP);
+}
 
 /** Truck pose `d` cm along its route. */
 export function truckPose(d: number) {
@@ -82,7 +108,7 @@ export function makeEvent(kind: WorldEventKind, now: number, rand = Math.random,
   }
   if (kind === "mail" && at) {
     const porch = porchNear({ x: at.x + 900, z: at.z });
-    return { id, kind, title: "Special delivery!", hint: "The mail carrier left a parcel with a toy inside on a porch. Find it and press E.", x: porch.x, z: porch.z, start: now, duration: 120 };
+    return { id, kind, title: "Special delivery!", hint: "The mail carrier left a parcel with a toy inside on a porch. Find it and press E.", x: porch.x, z: porch.z, start: now, duration: 180 };
   }
   if (kind === "bikes" && at) {
     // It bounces off the sidewalk into the near lane.
@@ -97,7 +123,7 @@ export function makeEvent(kind: WorldEventKind, now: number, rand = Math.random,
   }
   if (kind === "garbage") {
     const p = truckPose(0);
-    return { id, kind, title: "Garbage day", hint: "The truck is heading for the landfill. Hop on the back (E) and ride along.", x: p.x, z: p.z, start: now, duration: garbageRoute().total / TRUCK_SPEED + 40 };
+    return { id, kind, title: "Garbage day", hint: "The truck stops for bins on its way to the landfill. Catch it while it's stopped and hop on the back (E).", x: p.x, z: p.z, start: now, duration: truckDuration() + 20 };
   }
   const door = doorOutside(landmarkById.toybarn, 400);
   return { id, kind, title: "Toy Barn sale!", hint: "Doors are open and prizes are out. Grab a bargain at the entrance (E).", x: door.x, z: door.z, start: now, duration: 120 };

@@ -1,6 +1,7 @@
 import { EAVE_Y, EXT_Y, GROUND_Y, HOUSE, SHELL, UPPER_Y } from "../house/layout";
 import { roofHeight } from "../town/blocks";
 import { BARN_DUCT_Y, landmarkById, toWorld } from "../town/config";
+import { SUNNY_DUCT } from "../town/interiors";
 
 /** Toy-sized secret passages: press E at `from` to pop out at `to`. */
 export interface Passage {
@@ -58,6 +59,44 @@ function local(id: string, lx: number, lz: number, y: number) {
 const sid = landmarkById.sid;
 const barn = landmarkById.toybarn;
 
+/** Floor vent in a room, the duct spot it leads to, and the hatch back down from the duct. */
+const SUNNY_ROOMS = [
+  { id: "butterfly", room: "the Butterfly Room", vent: -1900, up: -2450, hatch: -2650, down: { x: -2300, z: -1400 } },
+  { id: "storage", room: "the storage room", vent: 400, up: 250, hatch: 0, down: { x: -150, z: -1350 } },
+  { id: "caterpillar", room: "the Caterpillar Room", vent: 2350, up: 2450, hatch: 2650, down: { x: 2600, z: -1350 } },
+];
+
+function sunnyVents(): Passage[] {
+  const l = landmarkById.daycare;
+  const ductY = EXT_Y + SUNNY_DUCT.h;
+  const ductZ = (SUNNY_DUCT.z0 + SUNNY_DUCT.z1) / 2;
+  const ventZ = -1480;
+  // Along the duct is local x; facing along it in world terms depends on the building's turn.
+  const alongDuct = (dir: 1 | -1) => l.rot + (dir > 0 ? -Math.PI / 2 : Math.PI / 2);
+  return SUNNY_ROOMS.flatMap((r): Passage[] => [
+    {
+      id: `sunny-${r.id}-up`,
+      kind: "vent",
+      label: "Crawl up into the air vent",
+      from: local("daycare", r.vent, ventZ, EXT_Y),
+      to: local("daycare", r.up, ductZ, ductY),
+      yaw: alongDuct(r.up < 0 ? 1 : -1),
+      draw: true,
+      toast: "Into the ceiling vents! Sneak along and drop into another room.",
+    },
+    {
+      id: `sunny-${r.id}-down`,
+      kind: "vent",
+      label: `Drop down into ${r.room}`,
+      from: local("daycare", r.hatch, ductZ, ductY),
+      to: local("daycare", r.down.x, r.down.z, EXT_Y),
+      yaw: l.rot + Math.PI,
+      draw: false,
+      reach: 90,
+    },
+  ]);
+}
+
 export const PASSAGES: Passage[] = [
   // Andy's room <-> attic
   { id: "andy-vent", kind: "vent", label: "Crawl into the air vent", from: { x: -420, y: UPPER_Y, z: 470 }, to: { x: -300, y: EAVE_Y, z: 200 }, yaw: Math.PI, draw: true },
@@ -69,6 +108,9 @@ export const PASSAGES: Passage[] = [
   { id: "store-ladder", kind: "ladder", label: "Climb into the ceiling duct", from: local("toybarn", 2150, -2780, EXT_Y), to: local("toybarn", 1650, -2800, BARN_DUCT_Y), yaw: barn.rot + Math.PI / 2, draw: true },
   { id: "duct-east", kind: "ladder", label: "Climb down to the storeroom", from: local("toybarn", 1820, -2800, BARN_DUCT_Y), to: local("toybarn", 2450, -2780, EXT_Y), yaw: barn.rot - Math.PI / 2, draw: false },
   { id: "duct-west", kind: "vent", label: "Drop down to the shop floor", from: local("toybarn", -4180, -2800, BARN_DUCT_Y), to: local("toybarn", -4150, -2330, EXT_Y), yaw: barn.rot, draw: true },
+
+  // Sunnyside: floor vents in three rooms lead up into the ceiling duct along the back wall.
+  ...sunnyVents(),
 
   // Andy's house: the front and back doors are closed; open them with E.
   {

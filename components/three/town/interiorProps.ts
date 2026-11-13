@@ -311,6 +311,9 @@ export function buildProps(b: Builder, props: PropBox[], seed = 1) {
         break;
       case "recliner":
         b.use("gloss").box(x, 0, z, w, 40, d, "#8e44ad");
+        b.use("gloss").box(x, 40, z - d / 2 + 25, w, h + 30, 50, "#7b2cbf");
+        for (const sx of [-1, 1]) b.use("gloss").box(x + sx * (w / 2 - 18), 40, z + 10, 36, 30, d - 40, "#7b2cbf");
+        b.use("paint").box(x, 41, z + 20, w - 80, 6, d - 70, "#c77dff");
         break;
       case "craft":
         b.use("wood").box(x, 0, z, w, h, d, "#e8d5b0");
@@ -322,6 +325,51 @@ export function buildProps(b: Builder, props: PropBox[], seed = 1) {
       case "incinerator":
         b.use("metal").box(x, 0, z, w, h, d, "#4f5b66");
         b.use("glow").box(x, 40, z + d / 2 - 4, w * 0.7, h * 0.65, 8, "#ff7a3d");
+        break;
+      // Sunnyside hall: a snack machine (front faces -z) and the junk pile beside it.
+      case "vending": {
+        const f = z - d / 2;
+        b.use("gloss").box(x, 0, z, w, h, d, "#c1121f");
+        b.use("glass").box(x - 12, 30, f - 1, w - 44, h - 60, 2, "#dff3ff");
+        for (let row = 0; row < 5; row++) {
+          b.use("metal").box(x - 12, 34 + row * 26, f + 8, w - 46, 2, 14, "#9aa3ad");
+          for (let col = 0; col < 4; col++) b.use("gloss").box(x - 42 + col * 15, 36 + row * 26, f + 8, 10, 16, 8, BRIGHT[(row * 4 + col) % BRIGHT.length]);
+        }
+        b.use("metal").box(x + w / 2 - 16, 70, f - 1, 20, 70, 3, "#2b2f36");
+        for (let i = 0; i < 6; i++) b.use("paint").box(x + w / 2 - 16, 120 - i * 8, f - 3, 10, 4, 2, "#e9ecef");
+        b.use("paint").box(x - 12, 8, f - 1, w - 44, 16, 3, "#1d1d1f");
+        b.use("glow").box(x, h - 24, f - 1, w - 10, 16, 2, "#ffd166");
+        break;
+      }
+      case "wastebasket":
+        b.use("gloss").cyl(x, 0, z, w / 2 - 4, h, "#3a86ff", 14, w / 2);
+        b.use("paint").cyl(x, h - 1, z, w / 2 - 6, 2, "#f1faee", 14);
+        break;
+      case "gameboxes":
+        b.use("gloss").box(x, 0, z, w, h / 2, d, "#ffbe0b");
+        b.use("gloss").box(x + 2, h / 2, z - 2, w - 4, h / 2, d - 4, "#2a9d8f");
+        b.use("paint").box(x, h / 4, z - d / 2 - 0.5, w * 0.7, 10, 1, "#e63946");
+        break;
+      case "stepstool":
+        b.use("gloss").box(x, h - 10, z, w, 10, d, "#ff8fab");
+        for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.use("gloss").box(x + sx * (w / 2 - 6), 0, z + sz * (d / 2 - 6), 8, h - 10, 8, "#ff8fab");
+        b.use("gloss").box(x, h / 2, z - d / 2 + 4, w - 10, 6, 6, "#ff8fab");
+        break;
+      case "cardboard":
+        b.use("planks").box(x, 0, z, w, h - 40, d, "#c8a165");
+        b.use("planks").box(x, h - 40, z, w - 4, 40, d - 4, "#b48a55");
+        b.use("paint").box(x, h - 2, z, w - 2, 2, 6, "#d9c7a3");
+        break;
+      case "wardrobe":
+        b.use("gloss").box(x, 0, z, w, h, d, "#ffafcc");
+        b.use("gloss").box(x, h, z, w + 10, 14, d + 6, "#ff70a6");
+        b.use("glass").box(x, 60, z - d / 2 - 1, w * 0.36, 120, 2, "#e0f7ff");
+        for (const sx of [-1, 1]) b.use("metal").sphere(x + sx * 20, 110, z - d / 2 - 3, 4, "#ffd166", 1, 8);
+        break;
+      case "dumpster":
+        b.use("metal").box(x, 0, z, w, h, d, "#2d6a4f");
+        b.use("metal").box(x, h, z, w + 6, 8, d + 6, "#1b4332");
+        for (const sx of [-1, 1]) b.use("metal").box(x + sx * (w / 2 + 2), 20, z, 4, 30, d * 0.6, "#1b4332");
         break;
       default:
         b.use("paint").box(x, 0, z, w, h, d, "#a0a0a0");

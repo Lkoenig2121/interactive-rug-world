@@ -1,7 +1,7 @@
 import { EXT_Y } from "../house/layout";
 import type { WallSegment } from "../house/walkable";
 import { LANDMARKS, PLANE_FLOOR, toWorld, type Landmark } from "./config";
-import { INTERIOR_SOLIDS, PARTITIONS } from "./interiors";
+import { INTERIOR_SOLIDS, PARTITIONS, SUNNY_DUCT } from "./interiors";
 
 /** Floor height inside a landmark (the jet's cabin is raised). */
 export const landmarkFloor = (l: Landmark) => (l.kind === "plane" ? PLANE_FLOOR : EXT_Y);
@@ -47,7 +47,14 @@ function landmarkWalls(l: Landmark): WallSegment[] {
       segment(l, x1, z0, x1, z1, floor - 20, top),
     );
   }
-  for (const p of PARTITIONS[l.id] ?? []) out.push(segment(l, p.ax, p.az, p.bx, p.bz, floor - 20, floor + l.h));
+  for (const p of PARTITIONS[l.id] ?? []) out.push(segment(l, p.ax, p.az, p.bx, p.bz, floor - 20, floor + (p.h ?? l.h)));
+  if (l.id === "daycare") {
+    // Sides and ends of the ceiling duct, so you can't stroll off the edge.
+    const { x0, x1, z0, z1, h } = SUNNY_DUCT;
+    const y0 = floor + h - 5;
+    const y1 = floor + h + 70;
+    out.push(segment(l, x0, z0, x1, z0, y0, y1), segment(l, x0, z1, x1, z1, y0, y1), segment(l, x0, z0, x0, z1, y0, y1), segment(l, x1, z0, x1, z1, y0, y1));
+  }
   return out;
 }
 

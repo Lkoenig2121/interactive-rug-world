@@ -218,8 +218,7 @@ export function dressDino(b: Builder, l: Landmark) {
 
 /** Sunnyside: Butterfly is tidy, Caterpillar is chaos, a pink bear "rules" the west room. */
 export function dressDaycare(b: Builder, _l: Landmark) {
-  pinkBear(b, -1400, -1400, 2.2, 0.4);
-  monkeyCam(b, 0, 480, -1780, 1.6);
+  monkeyCam(b, 0, 380, -1780, 1.6);
   // Balls in the toddler-room pit.
   for (let i = 0; i < 40; i++) {
     const a = (i / 40) * Math.PI * 2;

@@ -16,6 +16,7 @@ import { Passages } from "./explore/Passages";
 import { Rides } from "./explore/Rides";
 import { SkyDome } from "./explore/SkyDome";
 import { Stars } from "./explore/Stars";
+import { Sunnyside } from "./explore/Sunnyside";
 import { FriendShelf, Friends } from "./explore/Friends";
 import { Neighbors } from "./explore/Neighbors";
 import { Traffic } from "./explore/Traffic";
@@ -107,6 +108,7 @@ export default function Experience() {
           <Neighbors />
           <Weather />
           <Friends />
+          <Sunnyside />
         </group>
         {inSpace && <SpaceLevel />}
         <Toy />

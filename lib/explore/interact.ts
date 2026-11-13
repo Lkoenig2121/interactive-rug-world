@@ -5,6 +5,7 @@ import { CAR_HALF, carLocal } from "./living";
 import { STARS_FOR_SPACE } from "./sky";
 import { PASSAGE_REACH, PASSAGES } from "./routes";
 import { HOME_PAD, SPACE, VILLAGES } from "./space";
+import { sunnysideInteraction } from "./sunnyside";
 
 type Toy = typeof runtime.toy;
 
@@ -13,7 +14,7 @@ const flat = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.
 const RIDES: { id: RideId; label: string; reach: number }[] = [
   { id: "train", label: "Hop on the train", reach: 0 },
   { id: "carousel", label: "Ride the baggage carousel", reach: 220 },
-  { id: "truck", label: "Hop on the garbage truck", reach: 420 },
+  { id: "truck", label: "Hop on the garbage truck", reach: 0 },
 ];
 
 /** Walkable carriage roofs in train space (u along the train, + toward the engine; v across). */
@@ -33,6 +34,19 @@ export function trainLocal(p: { x: number; z: number }) {
 export function trainWorld(u: number, v: number) {
   const r = runtime.explore.rides.train;
   return { x: r.cx + r.heading * u, z: r.cz - r.heading * v };
+}
+
+/** Truck body runs from its back step forward this far. */
+const TRUCK_LENGTH = 880;
+/** How far from the side or ends of the truck E still climbs on. */
+const TRUCK_REACH = 280;
+
+function nearTruck(t: Toy) {
+  const r = runtime.explore.rides.truck;
+  const fx = -Math.sin(r.yaw);
+  const fz = -Math.cos(r.yaw);
+  const along = Math.max(0, Math.min(TRUCK_LENGTH, (t.x - r.x) * fx + (t.z - r.z) * fz));
+  return Math.hypot(t.x - (r.x + fx * along), t.z - (r.z + fz * along)) < TRUCK_REACH;
 }
 
 function nearTrain(t: Toy) {
@@ -118,6 +132,9 @@ export function exploreInteraction(t: Toy): Interaction | null {
 
   if (t.mount === "ride") return { label: t.ride === "train" ? "Hop off the train" : "Hop off", action: () => hopOff() };
 
+  const quest = sunnysideInteraction(t);
+  if (quest) return quest;
+
   for (const p of PASSAGES) {
     if (flat(t, p.from) < (p.reach ?? PASSAGE_REACH) && Math.abs(t.y - p.from.y) < 60) {
       return { label: p.label, action: () => useStore.getState().teleportToy(p.to, p.yaw, p.toast) };
@@ -129,7 +146,7 @@ export function exploreInteraction(t: Toy): Interaction | null {
     for (const r of RIDES) {
       const pose = runtime.explore.rides[r.id];
       if (r.id === "truck" && !runtime.explore.rides.truck.active) continue;
-      const close = r.id === "train" ? nearTrain(t) : flat(t, pose) < r.reach;
+      const close = r.id === "train" ? nearTrain(t) : r.id === "truck" ? nearTruck(t) : flat(t, pose) < r.reach;
       if (close) return { label: r.label, action: () => board(r.id) };
     }
     const car = t.mount === "none" ? nearestCar(t) : -1;
@@ -149,7 +166,7 @@ export function exploreInteraction(t: Toy): Interaction | null {
     if (spaceUnlocked(s)) return { label: "Launch the rocket to space", action: () => useStore.getState().launchRocket() };
     return {
       label: "Rocket (locked)",
-      action: () => useStore.getState().showToast(`The rocket needs fuel: finish the rescue mission or find ${STARS_FOR_SPACE} stars (${s.stars.length} so far).`),
+      action: () => useStore.getState().showMessage(`The rocket needs fuel: finish the rescue mission or find ${STARS_FOR_SPACE} stars (${s.stars.length} so far).`),
     };
   }
 
@@ -179,7 +196,7 @@ function spaceInteraction(t: Toy): Interaction | null {
         action: () => {
           const s = useStore.getState();
           const line = s.bossDefeated ? "You beat the Baron! Party all night!" : v.lines[villageLine++ % v.lines.length];
-          s.showToast(`${v.name}: “${line}”`);
+          s.showMessage(`${v.name}: “${line}”`);
         },
       };
     }

@@ -1,6 +1,7 @@
 import { DOME, TOWER_STEP_SIZE, TOWER_STEPS } from "../explore/sky";
 import { EXT_Y, STREET, STREET_SPACING } from "../house/layout";
 import type { Vec2 } from "../world/types";
+import { SUNNY_DUCT, SUNNY_STEP, SUNNY_STEPS, SUNNY_VENDING } from "./interiors";
 
 /**
  * The town around Andy's house, at house scale (1 unit = 1 cm, toys are ~35 cm tall).
@@ -360,6 +361,22 @@ export const SURFACES: Surface[] = [
     },
   },
   { rect: localRect(landmarkById.toybarn, BARN_DUCT.x0, BARN_DUCT.z0, BARN_DUCT.x1, BARN_DUCT.z1), y: BARN_DUCT_Y },
+  // Sunnyside: the ceiling duct, the vending machine top and the junk pile up to it.
+  { rect: localRect(landmarkById.daycare, SUNNY_DUCT.x0, SUNNY_DUCT.z0, SUNNY_DUCT.x1, SUNNY_DUCT.z1), y: EXT_Y + SUNNY_DUCT.h },
+  {
+    rect: localRect(
+      landmarkById.daycare,
+      SUNNY_VENDING.x - SUNNY_VENDING.w / 2,
+      SUNNY_VENDING.z - SUNNY_VENDING.d / 2,
+      SUNNY_VENDING.x + SUNNY_VENDING.w / 2,
+      SUNNY_VENDING.z + SUNNY_VENDING.d / 2,
+    ),
+    y: EXT_Y + SUNNY_VENDING.h,
+  },
+  ...SUNNY_STEPS.map((s) => ({
+    rect: localRect(landmarkById.daycare, s.x - SUNNY_STEP.w / 2, SUNNY_VENDING.z - SUNNY_STEP.d / 2, s.x + SUNNY_STEP.w / 2, SUNNY_VENDING.z + SUNNY_STEP.d / 2),
+    y: EXT_Y + s.h,
+  })),
   {
     rect: { x0: DOME.x - DOME.r, x1: DOME.x + DOME.r, z0: DOME.z - DOME.r, z1: DOME.z + DOME.r },
     y: DOME.y,
