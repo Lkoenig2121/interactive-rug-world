@@ -3,10 +3,11 @@
 import { useFrame } from "@react-three/fiber";
 import { useRef } from "react";
 import * as THREE from "three";
-import { PASSAGES } from "@/lib/explore/routes";
-import { EAVE_Y, EXT_Y, HOUSE, inRect } from "@/lib/house/layout";
+import { PASSAGES, SHORTCUTS } from "@/lib/explore/routes";
+import { EAVE_Y, EXT_Y, GROUND_Y, HOUSE, inRect, SHELL } from "@/lib/house/layout";
 import { ATTIC } from "@/lib/house/walkable";
 import { runtime } from "@/lib/runtime";
+import { onAndyRoof } from "@/lib/town/blocks";
 import { BARN_DUCT, BARN_DUCT_Y, landmarkById, SID_LOFT, SID_UPSTAIRS_Y } from "@/lib/town/config";
 import type { Builder } from "../town/builder";
 import { Built, Sign } from "../town/parts";
@@ -29,6 +30,50 @@ function buildMarkers(b: Builder) {
     if (p.kind === "vent") grille(b, p.from.x, p.from.y, p.from.z);
     else ladder(b, p.from.x, p.from.z, p.from.y, p.to.y + 20, 0);
   }
+}
+
+/** Pet flap set into a wall, drawn on both faces; the wall runs along local x at z = 0. */
+function petFlap(b: Builder, x: number, y: number, z: number, half: number, frame: string, flap: string) {
+  b.at(x, y, z, 0, () => {
+    for (const s of [-1, 1]) {
+      b.use("paint").box(0, 0, s * (half + 1.5), 46, 52, 3, frame);
+      b.use("gloss").box(0, 4, s * (half + 3.5), 34, 40, 1.5, flap);
+      b.use("paint").box(0, 40, s * (half + 4.5), 30, 3, 1, "#1d1d1f");
+    }
+  });
+}
+
+/** Mail slots, pet doors, the dryer vent and the rain gutter around Andy's house, plus Sid's dog flap. */
+function buildShortcuts(b: Builder) {
+  const z1 = HOUSE.z1 + SHELL;
+  const z0 = HOUSE.z0 - SHELL;
+  const x1 = HOUSE.x1 + SHELL;
+  // Brass mail slot on both sides of the front door.
+  for (const [z, d] of [
+    [z1 + 1, 1],
+    [HOUSE.z1 - 1, -1],
+  ]) {
+    b.use("metal").box(SHORTCUTS.mailX, GROUND_Y + 90, z, 36, 11, 2, "#c9a227");
+    b.use("metal").box(SHORTCUTS.mailX, GROUND_Y + 93, z + d, 28, 5, 1, "#1d1d1f");
+  }
+  // Pet door in the kitchen's back wall.
+  petFlap(b, SHORTCUTS.petX, GROUND_Y, (z0 + HOUSE.z0) / 2, SHELL / 2, "#f8fafc", "#8a929c");
+  // Dryer vent: louvered hood outside, grille and a bit of lint inside.
+  b.use("metal").box(x1 + 8, GROUND_Y + 10, SHORTCUTS.dryerZ, 16, 34, 34, "#dfe3e8");
+  for (let i = 0; i < 3; i++) b.use("metal").box(x1 + 17, GROUND_Y + 14 + i * 10, SHORTCUTS.dryerZ, 2, 4, 30, "#9aa3ad");
+  b.use("metal").box(HOUSE.x1 - 1, GROUND_Y + 6, SHORTCUTS.dryerZ, 2, 30, 40, "#9aa3ad");
+  for (let i = -3; i <= 3; i++) b.use("metal").box(HOUSE.x1 - 2.5, GROUND_Y + 8, SHORTCUTS.dryerZ + i * 5, 1, 26, 2, "#5c6773");
+  b.use("paint").sphere(HOUSE.x1 - 30, GROUND_Y + 4, SHORTCUTS.dryerZ + 18, 9, "#d9dde3", 0.5, 8);
+  // Rain gutter along the front eave and a drainpipe down the front-right corner.
+  const { spout, gutterZ } = SHORTCUTS;
+  b.use("paint").box((HOUSE.x0 + HOUSE.x1) / 2, EAVE_Y - 16, gutterZ, HOUSE.x1 - HOUSE.x0 + 120, 14, 16, "#f4f4f0");
+  b.use("paint").box(spout.x, EXT_Y + 20, spout.z, 10, EAVE_Y - EXT_Y - 30, 10, "#f4f4f0");
+  b.use("paint").box(spout.x, EAVE_Y - 24, (spout.z + gutterZ) / 2, 10, 10, gutterZ - spout.z + 10, "#f4f4f0");
+  b.use("paint").box(spout.x + 12, EXT_Y, spout.z + 12, 30, 20, 30, "#f4f4f0", { ry: Math.PI / 4 });
+  for (let y = EXT_Y + 120; y < EAVE_Y - 40; y += 220) b.use("metal").box(spout.x, y, spout.z - 6, 14, 4, 4, "#9aa3ad");
+  // Sid's dog flap, chewed and grubby.
+  const sid = landmarkById.sid;
+  b.at(sid.x, EXT_Y, sid.z, sid.rot, () => petFlap(b, SHORTCUTS.sidPetX, 0, -sid.d / 2 - 7, 7, "#5b4a3a", "#3b3530"));
 }
 
 /** Dusty attic over Andy's bedrooms: rafters, boxes and forgotten toys. */
@@ -109,7 +154,7 @@ function buildBarnSecrets(b: Builder) {
 function Attic() {
   const ref = useRef<THREE.Group>(null);
   useFrame(() => {
-    if (ref.current) ref.current.visible = inRect(runtime.toy, HOUSE) && runtime.toy.y > EAVE_Y - 80;
+    if (ref.current) ref.current.visible = inRect(runtime.toy, HOUSE) && runtime.toy.y > EAVE_Y - 80 && !onAndyRoof(runtime.toy);
   });
   return (
     <group ref={ref} visible={false}>
@@ -124,6 +169,7 @@ export function Passages() {
   return (
     <group>
       <Built deps={["passage-markers"]} build={buildMarkers} />
+      <Built deps={["shortcuts"]} build={buildShortcuts} />
       <Built deps={["sid-loft"]} build={buildSidLoft} />
       <Built deps={["barn-secrets"]} build={buildBarnSecrets} />
       <Attic />

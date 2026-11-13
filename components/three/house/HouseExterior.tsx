@@ -22,6 +22,7 @@ import {
 } from "@/lib/house/layout";
 import { runtime } from "@/lib/runtime";
 import { useStore } from "@/lib/store";
+import { onAndyRoof } from "@/lib/town/blocks";
 import { landmarkById } from "@/lib/town/config";
 import { Enterable } from "./HouseEnterTargets";
 import { mat } from "@/lib/three/materials";
@@ -569,7 +570,7 @@ export function HouseExterior() {
   useFrame(({ camera, controls }) => {
     if (!shell.current) return;
     const { mode, flight } = useStore.getState();
-    const toyOutside = isOutsideHouse(runtime.toy);
+    const toyOutside = isOutsideHouse(runtime.toy) || onAndyRoof(runtime.toy);
     let visible = (mode === "room" || mode === "house" || mode === "transition") && isOutsideHouse(camera.position);
     if (mode === "toy") {
       visible = toyOutside;

@@ -21,8 +21,8 @@ export interface Block {
   ridge?: { across: "x" | "z"; half: number; rise: number };
   /** Walls are already covered elsewhere (landmark shells, Andy's house). */
   noWalls?: boolean;
-  /** Over this inner area the roof only counts once you're above its surface (Andy's attic sits under it). */
-  strictInner?: { hw: number; hd: number };
+  /** Over this world-space area the roof only counts once you're above its surface (Andy's attic sits under it). */
+  strictRect?: { x0: number; x1: number; z0: number; z1: number };
 }
 
 const block = (x: number, z: number, rot: number, w: number, d: number, wallTop: number, extra: Partial<Block> = {}): Block => ({
@@ -77,14 +77,23 @@ function neighborBlocks(): Block[] {
 }
 
 /** Andy's main roof (ridge along x); the inside of the house keeps its own floors and attic. */
-function andyRoof(): Block {
+function andyRoof(): Block[] {
   const w = HOUSE.x1 - HOUSE.x0 + 2 * SHELL + 100;
   const d = HOUSE.z1 - HOUSE.z0 + 2 * SHELL + 100;
-  const strictInner = { hw: (HOUSE.x1 - HOUSE.x0) / 2 - 80, hd: (HOUSE.z1 - HOUSE.z0) / 2 - 120 };
-  return block((HOUSE.x0 + HOUSE.x1) / 2, (HOUSE.z0 + HOUSE.z1) / 2, 0, w, d, EAVE_Y, { ridge: { across: "z", half: d / 2, rise: 380 }, noWalls: true, strictInner });
+  const main = block((HOUSE.x0 + HOUSE.x1) / 2, (HOUSE.z0 + HOUSE.z1) / 2, 0, w, d, EAVE_Y, { ridge: { across: "z", half: d / 2, rise: 380 }, noWalls: true, strictRect: ATTIC_RECT });
+  // Front cross gable over Andy's room: ridge along z, centered on x = 0 (matches HouseExterior's Roofs).
+  const cw = 900 + 2 * SHELL + 100;
+  const cd = CROSS_LEN + 100;
+  const front = HOUSE.z1 + SHELL;
+  const cross = block(0, front - CROSS_LEN / 2, 0, cw, cd, EAVE_Y, { ridge: { across: "x", half: cw / 2, rise: 300 }, noWalls: true, strictRect: ATTIC_RECT });
+  return [main, cross];
 }
 
-export const BLOCKS: Block[] = [andyRoof(), ...landmarkBlocks(), ...propBlocks(), ...neighborBlocks()];
+/** Same footprint as the attic floor in walkable.ts. */
+const ATTIC_RECT = { x0: HOUSE.x0 + 80, x1: HOUSE.x1 - 80, z0: HOUSE.z0 + 120, z1: HOUSE.z1 - 120 };
+const CROSS_LEN = 440;
+
+export const BLOCKS: Block[] = [...andyRoof(), ...landmarkBlocks(), ...propBlocks(), ...neighborBlocks()];
 
 /** Local position inside a block's frame, or null when outside its footprint. */
 function local(b: Block, x: number, z: number) {
@@ -145,12 +154,19 @@ export function roofHeight(x: number, z: number, y: number): number | null {
     const p = local(b, x, z);
     if (!p) continue;
     const top = roofAt(b, p);
-    const s = b.strictInner;
-    const strict = s && Math.abs(p.x) <= s.hw && Math.abs(p.z) <= s.hd;
+    const s = b.strictRect;
+    const strict = s && x >= s.x0 && x <= s.x1 && z >= s.z0 && z <= s.z1;
     const on = strict ? y > top - 40 : y >= b.wallTop - 20;
     if (on && (best === null || top > best)) best = top;
   }
   return best;
+}
+
+/** True when standing on (or just above) Andy's roof rather than inside the house under it. */
+export function onAndyRoof(p: { x: number; y: number; z: number }) {
+  const m = SHELL + 60;
+  if (p.x < HOUSE.x0 - m || p.x > HOUSE.x1 + m || p.z < HOUSE.z0 - m || p.z > HOUSE.z1 + m) return false;
+  return roofHeight(p.x, p.z, p.y) !== null;
 }
 
 /** Wall segments around every block that doesn't already have walls. */

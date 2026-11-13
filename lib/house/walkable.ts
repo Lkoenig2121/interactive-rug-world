@@ -4,7 +4,6 @@ import { SURFACES } from "../town/config";
 import { RUG } from "../world/roads";
 import {
   ANDY_ROOM,
-  APERTURES,
   DOORWAYS,
   EAVE_Y,
   EXT_Y,
@@ -70,12 +69,9 @@ function roomWalls(r: Rect, level: Level): WallSegment[] {
   const y0 = level === 0 ? EXT_Y - 20 : y - 20;
   const y1 = y + STOREY;
   const out: WallSegment[] = [];
-  const doorGaps = (axis: "x" | "z", at: number) => {
-    const gaps = DOORWAYS.filter((d) => d.level === level && d.axis === axis && Math.abs(d.at - at) < 2).map((d) => ({ c: d.c, w: d.w }));
-    const side = axis === "z" ? (at === HOUSE.z0 ? "n" : at === HOUSE.z1 ? "s" : null) : at === HOUSE.x0 ? "w" : at === HOUSE.x1 ? "e" : null;
-    for (const a of APERTURES) if (side && a.side === side && a.level === level && a.bottom < 30) gaps.push({ c: a.c, w: a.w });
-    return gaps;
-  };
+  // Only doorways between rooms are open; the outside doors stay shut and are opened with E (see explore/routes).
+  const doorGaps = (axis: "x" | "z", at: number) =>
+    DOORWAYS.filter((d) => d.level === level && d.axis === axis && Math.abs(d.at - at) < 2).map((d) => ({ c: d.c, w: d.w }));
   for (const z of [r.z0, r.z1]) {
     for (const [a, b] of spans(r.x0, r.x1, doorGaps("z", z))) out.push({ ax: a, az: z, bx: b, bz: z, y0, y1 });
   }

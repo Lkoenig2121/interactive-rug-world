@@ -84,8 +84,8 @@ export function exploreInteraction(t: Toy): Interaction | null {
   if (t.mount === "ride") return { label: t.ride === "train" ? "Hop off the train" : "Hop off", action: () => hopOff() };
 
   for (const p of PASSAGES) {
-    if (flat(t, p.from) < PASSAGE_REACH && Math.abs(t.y - p.from.y) < 60) {
-      return { label: p.label, action: () => useStore.getState().teleportToy(p.to, p.yaw) };
+    if (flat(t, p.from) < (p.reach ?? PASSAGE_REACH) && Math.abs(t.y - p.from.y) < 60) {
+      return { label: p.label, action: () => useStore.getState().teleportToy(p.to, p.yaw, p.toast) };
     }
   }
 

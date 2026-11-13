@@ -163,6 +163,68 @@ function DoorCasings() {
   );
 }
 
+const sliderGlass = new THREE.MeshStandardMaterial({ color: "#cfe8f5", transparent: true, opacity: 0.28, roughness: 0.05, metalness: 0.2, depthWrite: false });
+
+/** Facing that turns local +z into the house, for each outside wall. */
+const INWARD: Record<Side, number> = { s: Math.PI, n: 0, e: -Math.PI / 2, w: Math.PI / 2 };
+
+/**
+ * Inside face of every outside door. The exterior shell (and its door) is hidden while you're indoors,
+ * so without these the front door would be an open hole from inside.
+ */
+function OutsideDoors() {
+  return (
+    <group>
+      {APERTURES.filter((a) => a.kind === "door" || a.kind === "slider").map((a, i) => {
+        const y = levelY(a.level) + a.bottom;
+        const h = a.top - a.bottom;
+        const pos: [number, number, number] =
+          a.side === "s" ? [a.c, 0, HOUSE.z1] : a.side === "n" ? [a.c, 0, HOUSE.z0] : a.side === "e" ? [HOUSE.x1, 0, a.c] : [HOUSE.x0, 0, a.c];
+        if (a.kind === "slider") {
+          // Two glass panels, the inner one overlapping the outer, in white frames with a pull handle.
+          const pw = a.w / 2 + 6;
+          return (
+            <group key={i} position={pos} rotation-y={INWARD[a.side]}>
+              {[-1, 1].map((s) => (
+                <group key={s} position={[(s * (a.w - pw)) / 2, 0, s < 0 ? 0.5 : 3]}>
+                  <mesh position={[0, y + h / 2, 0]} material={sliderGlass}>
+                    <boxGeometry args={[pw - 12, h - 12, 1]} />
+                  </mesh>
+                  {[-1, 1].map((e) => (
+                    <B key={e} p={[(e * (pw - 6)) / 2, y, 0]} s={[6, h, 3]} c="#f8f6f0" rough={0.5} />
+                  ))}
+                  <B p={[0, y, 0]} s={[pw, 6, 3]} c="#f8f6f0" rough={0.5} />
+                  <B p={[0, y + h - 6, 0]} s={[pw, 6, 3]} c="#f8f6f0" rough={0.5} />
+                </group>
+              ))}
+              <B p={[a.w / 2 - pw + 10, y + 85, 5]} s={[3, 30, 3]} c="#9aa3ad" rough={0.3} metal={0.6} />
+              <B p={[0, y - 1, 1.5]} s={[a.w + 8, 2, 8]} c="#c0c7cf" rough={0.4} metal={0.5} />
+              {[-1, 1].map((s) => (
+                <B key={s} p={[s * (a.w / 2 + 4), y, 2]} s={[8, h + 8, 4]} c="#f8f6f0" rough={0.5} />
+              ))}
+              <B p={[0, y + h, 2]} s={[a.w + 16, 8, 4]} c="#f8f6f0" rough={0.5} />
+            </group>
+          );
+        }
+        return (
+          <group key={i} position={pos} rotation-y={INWARD[a.side]}>
+            <B p={[0, y, -1]} s={[a.w, h, 3]} c="#f3efe6" rough={0.45} />
+            {[0.12, 0.6].map((t) =>
+              [-1, 1].map((s) => <B key={`${t}${s}`} p={[(s * a.w) / 4.4, y + h * t, 0.8]} s={[a.w / 3, h * 0.28, 1.2]} c="#e7e1d4" rough={0.45} />),
+            )}
+            <S p={[-a.w / 2 + 12, y + 100, 3]} r={3} c="#d8b25a" />
+            <B p={[-a.w / 2 + 12, y + 118, 0.6]} s={[7, 7, 1.5]} c="#d8b25a" rough={0.3} />
+            {[-1, 1].map((s) => (
+              <B key={s} p={[s * (a.w / 2 + 4), y, 2]} s={[8, h + 8, 4]} c="#f8f6f0" rough={0.5} />
+            ))}
+            <B p={[0, y + h, 2]} s={[a.w + 16, 8, 4]} c="#f8f6f0" rough={0.5} />
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
 const RISE = 20;
 const RUN = 25;
 
@@ -491,6 +553,7 @@ export function HouseInterior() {
         <RoomShell key={r.id} room={r} />
       ))}
       <DoorCasings />
+      <OutsideDoors />
       <Stairs />
       <Landing />
       <Hall />
