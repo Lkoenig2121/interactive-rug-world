@@ -4,7 +4,7 @@ import type { Pose, Vec2 } from "./world/types";
 
 /** What the toy is riding: nothing, flying (space ranger), a horse, an RC car, or a moving ride (train, carousel, truck). */
 export type Mount = "none" | "fly" | "horse" | "car" | "ride";
-export type RideId = "train" | "carousel" | "truck";
+export type RideId = "train" | "carousel" | "truck" | "hitch";
 
 export const PLAYER_SPAWN: Pose = { x: 6.2, z: 36, yaw: 0 };
 export const CAR_SPAWN: Pose = { x: 30, z: 2.5, yaw: -Math.PI / 2 };
@@ -44,6 +44,8 @@ export const runtime = {
     ride: null as RideId | null,
     /** Position on the train roof in train space: u along the train, v across, h above the roof, and facing relative to the train. */
     onTrain: { u: 0, v: 0, h: 0, vy: 0, relYaw: 0 },
+    /** Sailing a paper boat across a rain puddle. */
+    boating: false,
   },
   explore: {
     /** 0 = midday, 0.5 = midnight; wraps at 1. */
@@ -58,6 +60,22 @@ export const runtime = {
       train: { x: 0, y: 0, z: 0, yaw: 0, cx: 0, cz: 0, heading: 1, trainYaw: Math.PI / 2 },
       carousel: { x: 0, y: 0, z: 0, yaw: 0 },
       truck: { x: 0, y: 0, z: 0, yaw: 0, active: false },
+      /** Roof of the traffic car you hitched a ride on (`car` is its index, -1 for none). */
+      hitch: { x: 0, y: 0, z: 0, yaw: 0, car: -1 },
+    },
+    /** Live poses of the traffic cars (model yaw, +z forward). */
+    traffic: [] as { x: number; z: number; yaw: number }[],
+    /** Weather: what is scheduled, and how much rain, wind and falling snow there is right now (0..1). */
+    weather: {
+      kind: "clear" as "clear" | "rain" | "wind" | "snow",
+      until: 30,
+      rain: 0,
+      wind: 0,
+      snow: 0,
+      windAngle: 0.6,
+      /** How full the puddles are and how much snow lies on the ground, 0..1. */
+      puddles: 0,
+      cover: 0,
     },
     /** Rocket launch: clock time the countdown started (or null). */
     launchAt: null as number | null,

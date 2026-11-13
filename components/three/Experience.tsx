@@ -16,6 +16,9 @@ import { Passages } from "./explore/Passages";
 import { Rides } from "./explore/Rides";
 import { SkyDome } from "./explore/SkyDome";
 import { Stars } from "./explore/Stars";
+import { Neighbors } from "./explore/Neighbors";
+import { Traffic } from "./explore/Traffic";
+import { Weather } from "./explore/Weather";
 import { WorldEvents } from "./explore/WorldEvents";
 import { HouseExterior } from "./house/HouseExterior";
 import { HouseInterior } from "./house/HouseInterior";
@@ -98,6 +101,9 @@ export default function Experience() {
           <Passages />
           <Rides />
           <WorldEvents />
+          <Traffic />
+          <Neighbors />
+          <Weather />
         </group>
         {inSpace && <SpaceLevel />}
         <Toy />

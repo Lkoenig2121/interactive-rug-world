@@ -21,6 +21,8 @@ function useRuntime<T>(read: () => T, ms = 100) {
   return v;
 }
 
+const WEATHER_ICON: Partial<Record<string, string>> = { rain: "☂", wind: "༄", snow: "❄" };
+
 function clockLabel(dayTime: number) {
   const h = ((dayTime + 0.5) % 1) * 24;
   const hh = Math.floor(h);
@@ -41,6 +43,8 @@ export function ExploreStatus() {
     flying: runtime.toy.mount === "fly",
     gliding: runtime.toy.gliding,
     day: runtime.explore.dayTime,
+    weather: runtime.explore.weather.kind,
+    boating: runtime.toy.boating,
     ring: runtime.explore.ring.active ? { next: runtime.explore.ring.next, t: runtime.town.clock - runtime.explore.ring.start } : null,
     hearts: runtime.explore.space.hearts,
     boss: runtime.explore.space.bossHp,
@@ -57,7 +61,7 @@ export function ExploreStatus() {
         </span>
         {!inSpace && (
           <span className="text-xs font-semibold text-white/80">
-            {isNight ? "☾" : "☀"} {clockLabel(snap.day)}
+            {WEATHER_ICON[snap.weather] ?? (isNight ? "☾" : "☀")} {clockLabel(snap.day)}
           </span>
         )}
       </div>
@@ -77,6 +81,7 @@ export function ExploreStatus() {
         </div>
       )}
       {toy !== "ranger" && snap.gliding && <div className="text-[11px] font-semibold text-sky-200">Paper glider out!</div>}
+      {snap.boating && <div className="text-[11px] font-semibold text-sky-200">Sailing a paper boat!</div>}
       {snap.ring && (
         <div className="rounded-lg bg-sky-500/30 px-2 py-1 text-xs font-bold">
           Rings {snap.ring.next}/12 · {snap.ring.t.toFixed(1)} s

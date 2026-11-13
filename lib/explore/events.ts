@@ -1,10 +1,15 @@
 import { EXT_Y } from "../house/layout";
+import { NEIGHBOR_HOUSES, neighborLayout } from "../house/neighbors";
+import { ELM_Z, lawnBeside, type NeighborId } from "./living";
 import { doorOutside, landmarkById } from "../town/config";
 import { arrivalPoint, findTownRoute, offsetRoute } from "../town/navigation";
 import type { Vec2 } from "../world/types";
 
 /** Random happenings around town, City Trial style. */
-export type WorldEventKind = "meteor" | "garbage" | "sale";
+export type WorldEventKind = "meteor" | "garbage" | "sale" | "dog" | "mail" | "bikes";
+
+/** Events started by a neighbor's routine rather than at random. */
+export const NEIGHBOR_EVENT: Record<NeighborId, WorldEventKind> = { walker: "dog", mail: "mail", kids: "bikes" };
 
 export interface WorldEvent {
   id: number;
@@ -17,6 +22,8 @@ export interface WorldEvent {
   /** Clock time it started and how long it lasts. */
   start: number;
   duration: number;
+  /** Fixed spot the event centers on (the yard the dog runs around). */
+  anchor?: Vec2;
 }
 
 export const FIRST_EVENT_DELAY = 45;
@@ -51,8 +58,37 @@ export function truckPose(d: number) {
 
 let nextId = 0;
 
-export function makeEvent(kind: WorldEventKind, now: number, rand = Math.random): WorldEvent {
+/** Parcel spot on the porch of the neighbor house nearest `p` on the same side of the street. */
+function porchNear(p: Vec2): Vec2 {
+  let best: Vec2 = { x: p.x, z: p.z };
+  let bestD = Infinity;
+  for (const h of NEIGHBOR_HOUSES) {
+    const front = { x: neighborLayout(h).bodyX, z: h.zFront + h.facing * 150 };
+    const d = Math.hypot(front.x - p.x, front.z - p.z);
+    if (d < bestD) {
+      bestD = d;
+      best = front;
+    }
+  }
+  return best;
+}
+
+/** `at` is where the neighbor who starts it is standing (for the dog, mail and bike events). */
+export function makeEvent(kind: WorldEventKind, now: number, rand = Math.random, at?: Vec2): WorldEvent {
   const id = ++nextId;
+  if (kind === "dog" && at) {
+    const yard = lawnBeside(at);
+    return { id, kind, title: "The dog grabbed a toy!", hint: "It slipped its leash and is running around the front yards. Catch the dog to get the toy back.", x: yard.x, z: yard.z, start: now, duration: 75, anchor: yard };
+  }
+  if (kind === "mail" && at) {
+    const porch = porchNear({ x: at.x + 900, z: at.z });
+    return { id, kind, title: "Special delivery!", hint: "The mail carrier left a parcel with a toy inside on a porch. Find it and press E.", x: porch.x, z: porch.z, start: now, duration: 120 };
+  }
+  if (kind === "bikes" && at) {
+    // It bounces off the sidewalk into the near lane.
+    const z = at.z + Math.sign(ELM_Z - at.z) * 330;
+    return { id, kind, title: "A toy fell off a bike!", hint: "It bounced out of a bike basket into Elm Street. Grab it (E) before the traffic does.", x: at.x, z, start: now, duration: 90 };
+  }
   if (kind === "meteor") {
     const park = landmarkById.park;
     const x = park.x + (rand() - 0.5) * park.w * 0.7;

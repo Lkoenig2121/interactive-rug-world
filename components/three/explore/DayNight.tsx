@@ -16,6 +16,7 @@ const DAY = { bg: new THREE.Color("#cfe3f0"), fog: new THREE.Color("#d9e9f3"), t
 const DUSK = { horizon: new THREE.Color("#f4a261") };
 const NIGHT = { bg: new THREE.Color("#0b1430"), fog: new THREE.Color("#101a38"), top: new THREE.Color("#050a1c"), horizon: new THREE.Color("#1b2a55") };
 const SPACE_BG = new THREE.Color("#02030a");
+const STORM = new THREE.Color("#8d99a6");
 
 type Lit = THREE.Light & { userData: { base?: number } };
 
@@ -55,6 +56,8 @@ function Cycle() {
     const n = outdoors ? darkness(ex.dayTime) : 0;
     ex.night = n;
     s.setNight(n > 0.5);
+    const w = ex.weather;
+    const gloom = outdoors ? Math.max(w.rain, w.snow * 0.6) : 0;
 
     const bg = scene.background instanceof THREE.Color ? scene.background : null;
     if (s.inSpace) {
@@ -64,10 +67,10 @@ function Cycle() {
         scene.fog.far = 400000;
       }
     } else {
-      bg?.copy(DAY.bg).lerp(NIGHT.bg, n);
+      bg?.copy(DAY.bg).lerp(NIGHT.bg, n).lerp(STORM, gloom * (1 - n * 0.7));
       if (scene.fog instanceof THREE.Fog) {
-        scene.fog.color.copy(DAY.fog).lerp(NIGHT.fog, n);
-        scene.fog.far = 90000;
+        scene.fog.color.copy(DAY.fog).lerp(NIGHT.fog, n).lerp(STORM, gloom * (1 - n * 0.7));
+        scene.fog.far = 90000 * (1 - 0.6 * w.rain - 0.45 * w.snow);
       }
     }
     const dusk = Math.max(0, 1 - Math.abs(n - 0.45) / 0.3);
@@ -88,7 +91,7 @@ function Cycle() {
       });
       lights.current = found;
     }
-    const dim = s.mode === "interior" ? 1 : 1 - 0.78 * (s.inSpace ? 0.5 : n);
+    const dim = s.mode === "interior" ? 1 : (1 - 0.78 * (s.inSpace ? 0.5 : n)) * (s.inSpace ? 1 : 1 - 0.35 * gloom);
     for (const l of lights.current) l.intensity = (l.userData.base ?? l.intensity) * dim;
   });
   return null;

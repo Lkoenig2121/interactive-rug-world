@@ -3,7 +3,8 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
-import { TRAIN_DECK, trainWorld } from "@/lib/explore/interact";
+import { hopOff, TRAIN_DECK, trainWorld } from "@/lib/explore/interact";
+import { puddleAt, windPush } from "@/lib/explore/living";
 import { DOME, flightCeiling, RING_RADIUS, RINGS, STARS_FOR_SKY, UPDRAFT } from "@/lib/explore/sky";
 import { HOME_PAD, LAUNCH_TIME, rocketRise, SPACE, SPACE_GRAVITY, SPACE_JUMP, SPACE_SPAWN, spaceGround } from "@/lib/explore/space";
 import { STARS } from "@/lib/explore/stars";
@@ -40,6 +41,7 @@ const PACE: Record<Mount, { walk: number; run: number; back: number; turn: numbe
   fly: { walk: 900, run: 2800, back: 300, turn: 2, radius: 16, jump: 0, cam: 420, lift: 0, accel: 3 },
   ride: { walk: 0, run: 0, back: 0, turn: 2.2, radius: 7, jump: 0, cam: 320, lift: 0, accel: 8 },
 };
+const BOAT = { walk: 260, run: 620, back: 120, accel: 1.4 };
 
 /** Fraction of the way from `a` to `b` where the segment first crosses a wall at height `y`, or 1. */
 function firstWallHit(a: THREE.Vector3, b: THREE.Vector3, y: number) {
@@ -108,6 +110,7 @@ export function ToyController() {
   const ceilingToast = useRef(-99);
   const entering = useRef(false);
   const fuelToast = useRef(false);
+  const boatToast = useRef(-99);
 
   useEffect(() => {
     camera.fov = FOV.toy;
@@ -144,6 +147,11 @@ export function ToyController() {
           if (m === "ride") {
             // On the train Space jumps along the roof (handled per frame); only E gets you off.
             if (t.ride === "train") break;
+            if (t.ride === "hitch") {
+              hopOff();
+              lastSpace.current = -9;
+              break;
+            }
             s.setMount("none");
             t.vy = 320;
             lastSpace.current = -9;
@@ -293,11 +301,12 @@ export function ToyController() {
       }
     }
 
+    if (t.mount === "ride" || frozen) t.boating = false;
     if (t.mount === "ride") {
-      // Carried by the train, carousel or garbage truck.
+      // Carried by the train, carousel, garbage truck or a car roof.
       const id = t.ride;
       const r = id ? runtime.explore.rides[id] : null;
-      if (!r || (id === "truck" && !runtime.explore.rides.truck.active)) store.setMount("none");
+      if (!r || (id === "truck" && !runtime.explore.rides.truck.active) || (id === "hitch" && runtime.explore.rides.hitch.car < 0)) store.setMount("none");
       else if (id === "train" && !frozen) {
         // Free movement on the carriage roofs, in the train's own frame, clamped so you can't fall off.
         const tr = runtime.explore.rides.train;
@@ -354,13 +363,22 @@ export function ToyController() {
       const flying = t.mount === "fly";
       t.turn = turn;
       t.yaw = wrapAngle(t.yaw + turn * pace.turn * dt * (t.mount === "car" ? clamp(Math.abs(t.speed) / 600, 0.25, 1) * Math.sign(t.speed || 1) : 1));
-      let targetSpeed = fwd > 0 ? (running ? pace.run : pace.walk) * fwd : fwd < 0 ? -pace.back : 0;
+      // A paper boat in a rain puddle: quicker, but it drifts and takes a moment to get going.
+      const weather = runtime.explore.weather;
+      const boat = !inSpace && t.mount === "none" && t.vy === 0 && !!puddleAt(t, weather.puddles) && t.y - groundAt(t.x, t.z, t.y) < 3;
+      if (boat && !t.boating && clock.elapsedTime - boatToast.current > 25) {
+        boatToast.current = clock.elapsedTime;
+        store.showToast("Paper boat! Sail across the puddle. The wind fills the sail.");
+      }
+      t.boating = boat;
+      const move = boat ? BOAT : pace;
+      let targetSpeed = fwd > 0 ? (running ? move.run : move.walk) * fwd : fwd < 0 ? -move.back : 0;
       if (flying && t.boost > 0) {
         targetSpeed = BOOST_SPEED;
         t.boost -= dt;
       }
       if (t.gliding) targetSpeed = Math.max(targetSpeed, flying ? pace.walk * 0.7 : 420);
-      t.speed += (targetSpeed - t.speed) * Math.min(1, dt * (flying && t.boost > 0 ? 6 : pace.accel));
+      t.speed += (targetSpeed - t.speed) * Math.min(1, dt * (flying && t.boost > 0 ? 6 : move.accel));
 
       // The camera swings back behind the toy unless you are dragging to look around.
       if (!dragging.current) {
@@ -452,7 +470,13 @@ export function ToyController() {
           }
         }
       }
-      t.phase += dt * t.speed * (t.mount === "horse" ? 0.012 : t.mount === "none" ? 0.085 : 0.02);
+      // Wind gusts blow gliders and paper boats sideways.
+      if (!inSpace && (t.gliding || boat) && weather.wind > 0.05) {
+        const push = windPush(weather, clock.elapsedTime);
+        const k = boat ? 0.35 : 1;
+        tryMove(push.x * k * dt, push.z * k * dt);
+      }
+      t.phase += dt * t.speed * (t.mount === "horse" ? 0.012 : t.mount === "none" && !boat ? 0.085 : 0.02);
 
       // Fell off the little planet.
       if (inSpace && t.y < SPACE.y - 1500) {

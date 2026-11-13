@@ -81,6 +81,35 @@ function PaperPlane() {
   );
 }
 
+/** Folded newspaper boat the toy stands in on a rain puddle (bow toward -z). */
+function PaperBoat() {
+  const paper = mat("#f3efe2", { roughness: 0.85, side: THREE.DoubleSide });
+  const print = mat("#c9c3b5", { roughness: 0.9, side: THREE.DoubleSide });
+  const hull = useMemo(() => {
+    // Trapezoid sides: long at the rim, short at the keel.
+    const side = (s: number) => {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute("position", new THREE.BufferAttribute(new Float32Array([0, 0, -11, 0, 0, 11, s * 9, 9, 22, 0, 0, -11, s * 9, 9, 22, s * 9, 9, -22]), 3));
+      g.computeVertexNormals();
+      return g;
+    };
+    const sail = new THREE.BufferGeometry();
+    sail.setAttribute("position", new THREE.BufferAttribute(new Float32Array([0, 9, 7, 0, 9, 22, 0, 30, 16]), 3));
+    sail.computeVertexNormals();
+    return { left: side(-1), right: side(1), sail };
+  }, []);
+  return (
+    <group>
+      <mesh geometry={hull.left} material={paper} />
+      <mesh geometry={hull.right} material={paper} />
+      <mesh position={[0, 0.3, 0]} material={print}>
+        <boxGeometry args={[1.5, 0.6, 22]} />
+      </mesh>
+      <mesh geometry={hull.sail} material={print} />
+    </group>
+  );
+}
+
 /** Face details on a head of radius `r` centered at `y`, looking toward -z. */
 function Face({ y, r }: { y: number; r: number }) {
   return (
@@ -215,6 +244,8 @@ type GroupRef = React.RefObject<THREE.Group | null>;
 /** Seat heights (cm above the ground) the toy's hips rest at. */
 const SADDLE_Y = 33.4;
 const CAR_SEAT_Y = 19;
+/** Puddle surface above the ground, where the paper boat floats. */
+const BOAT_Y = 6;
 
 /** Palomino toy horse, about 45 cm tall at the ears, facing -z. */
 function ToyHorse({ legs }: { legs: GroupRef[] }) {
@@ -301,6 +332,7 @@ export function Toy() {
   const root = useRef<THREE.Group>(null);
   const body = useRef<THREE.Group>(null);
   const plane = useRef<THREE.Group>(null);
+  const boat = useRef<THREE.Group>(null);
   const rig: Rig = { legL: useRef(null), legR: useRef(null), armL: useRef(null), armR: useRef(null) };
   const jet: Jet = { wingL: useRef(null), wingR: useRef(null), flame: useRef(null) };
   const horse = useRef<THREE.Group>(null);
@@ -368,7 +400,12 @@ export function Toy() {
     if (horse.current) horse.current.visible = onHorse;
     if (car.current) car.current.visible = inCar;
     const hip = kind === "cowboy" ? 15 : 13.5;
-    if (body.current) body.current.position.y = onHorse ? SADDLE_Y - hip : inCar ? CAR_SEAT_Y - hip : 0;
+    if (body.current) body.current.position.y = onHorse ? SADDLE_Y - hip : inCar ? CAR_SEAT_Y - hip : t.boating ? BOAT_Y + 1 : 0;
+    const b = boat.current;
+    if (b) {
+      b.visible = t.boating;
+      if (t.boating) b.rotation.set(Math.sin(now * 2.1) * 0.05, 0, Math.sin(now * 2.7) * 0.08);
+    }
     if (onHorse || inCar) {
       const spread = onHorse ? 0.6 : 0.15;
       const fwd = onHorse ? 0.25 : 1.45;
@@ -399,6 +436,9 @@ export function Toy() {
       <group ref={body}>{kind === "cowboy" ? <Cowboy {...rig} /> : <Ranger {...rig} {...jet} />}</group>
       <group ref={plane} visible={false}>
         <PaperPlane />
+      </group>
+      <group ref={boat} position-y={BOAT_Y} visible={false}>
+        <PaperBoat />
       </group>
       <group ref={horse} visible={false}>
         <ToyHorse legs={horseLegs} />

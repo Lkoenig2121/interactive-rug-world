@@ -1,6 +1,7 @@
 import { EXT_Y } from "../house/layout";
 import { runtime, type RideId } from "../runtime";
 import { launchPad, spaceUnlocked, useStore, type Interaction } from "../store";
+import { CAR_HALF, carLocal } from "./living";
 import { STARS_FOR_SPACE } from "./sky";
 import { PASSAGE_REACH, PASSAGES } from "./routes";
 import { HOME_PAD, SPACE, VILLAGES } from "./space";
@@ -57,7 +58,30 @@ export function board(id: RideId) {
   t.ride = id;
   t.gliding = false;
   s.setMount("ride");
-  s.showToast(id === "train" ? "All aboard! Run and jump along the roof. E to hop off." : id === "truck" ? "Holding on to the back of the truck. Space to jump off." : "Round and round. Space to hop off.");
+  s.showToast(
+    id === "train"
+      ? "All aboard! Run and jump along the roof. E to hop off."
+      : id === "truck"
+        ? "Holding on to the back of the truck. Space to jump off."
+        : id === "hitch"
+          ? "Hitching a ride on the car roof! Space or E to hop off to the side."
+          : "Round and round. Space to hop off.",
+  );
+}
+
+/** The traffic car close enough to climb onto, if any. */
+function nearestCar(t: Toy) {
+  let best = -1;
+  let bestD = Infinity;
+  runtime.explore.traffic.forEach((c, i) => {
+    const q = carLocal(c, t);
+    const out = Math.hypot(Math.max(0, Math.abs(q.along) - CAR_HALF.l), Math.max(0, Math.abs(q.across) - CAR_HALF.w));
+    if (out < 160 && out < bestD) {
+      best = i;
+      bestD = out;
+    }
+  });
+  return best;
 }
 
 /** Gets off the current ride; off the train you land beside the track rather than on it. */
@@ -71,6 +95,17 @@ export function hopOff() {
     t.y = EXT_Y;
   }
   t.vy = 0;
+  if (t.ride === "hitch") {
+    // Jump clear to the curb side so the car doesn't run you over.
+    const r = runtime.explore.rides.hitch;
+    const car = runtime.explore.traffic[r.car];
+    if (car) {
+      t.x = car.x - Math.cos(car.yaw) * (CAR_HALF.w + 110);
+      t.z = car.z + Math.sin(car.yaw) * (CAR_HALF.w + 110);
+    }
+    t.vy = 180;
+    r.car = -1;
+  }
   useStore.getState().setMount("none");
 }
 
@@ -97,6 +132,16 @@ export function exploreInteraction(t: Toy): Interaction | null {
       const close = r.id === "train" ? nearTrain(t) : flat(t, pose) < r.reach;
       if (close) return { label: r.label, action: () => board(r.id) };
     }
+    const car = t.mount === "none" ? nearestCar(t) : -1;
+    if (car >= 0) {
+      return {
+        label: "Hitch a ride on the car roof",
+        action: () => {
+          runtime.explore.rides.hitch.car = car;
+          board("hitch");
+        },
+      };
+    }
   }
 
   const pad = launchPad();
@@ -113,6 +158,12 @@ export function exploreInteraction(t: Toy): Interaction | null {
     return e.kind === "meteor"
       ? { label: "Return the lost toy", action: () => useStore.getState().completeEvent("The lost toy is safe! It waves a tiny thank-you.") }
       : { label: "Grab a sale bargain", action: () => useStore.getState().completeEvent("Bargain found: a shiny sticker for your collection!") };
+  }
+  if (e && nearGround && e.kind === "mail" && flat(t, e) < 220) {
+    return { label: "Open the parcel", action: () => useStore.getState().completeEvent("You open the parcel and a wind-up frog hops out. Special delivery complete!") };
+  }
+  if (e && nearGround && e.kind === "bikes" && flat(t, e) < 200) {
+    return { label: "Pick up the dropped toy", action: () => useStore.getState().completeEvent("Saved it from the traffic! The kids ring their bells to say thanks.") };
   }
   return null;
 }
