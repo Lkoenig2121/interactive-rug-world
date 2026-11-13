@@ -2,11 +2,13 @@ import { EAVE_Y, EXT_Y, GROUND_Y, HOUSE, SHELL, UPPER_Y } from "../house/layout"
 import { roofHeight } from "../town/blocks";
 import { BARN_DUCT_Y, landmarkById, toWorld } from "../town/config";
 import { SUNNY_DUCT } from "../town/interiors";
+import { drainpipe, PIPE_HOUSES, RIDGE_Y, ROOF_ROW, ZIPLINE } from "./rooftops";
+import { SEWER_EXITS, sewerWorld } from "./sewer";
 
 /** Toy-sized secret passages: press E at `from` to pop out at `to`. */
 export interface Passage {
   id: string;
-  kind: "vent" | "ladder" | "slot" | "petdoor" | "dryer" | "gutter" | "door";
+  kind: "vent" | "ladder" | "slot" | "petdoor" | "dryer" | "gutter" | "door" | "manhole";
   label: string;
   from: { x: number; y: number; z: number };
   to: { x: number; y: number; z: number };
@@ -97,7 +99,76 @@ function sunnyVents(): Passage[] {
   ]);
 }
 
+function sewerPassages(): Passage[] {
+  return SEWER_EXITS.flatMap((e): Passage[] => [
+    {
+      id: `sewer-${e.id}-down`,
+      kind: "manhole",
+      label: "Lift the manhole and climb down",
+      from: e.town,
+      to: sewerWorld(e.arrive.x, e.arrive.z),
+      yaw: e.yaw,
+      draw: false,
+      toast: `Down in the storm drains under ${e.name}. Drip… drip…`,
+    },
+    {
+      id: `sewer-${e.id}-up`,
+      kind: "manhole",
+      label: `Climb up to ${e.name}`,
+      from: sewerWorld(e.ladder.x, e.ladder.z),
+      to: { x: e.town.x + 110, y: e.town.y + 5, z: e.town.z },
+      yaw: 0,
+      draw: false,
+      toast: `You pop out of a manhole at ${e.name}.`,
+    },
+  ]);
+}
+
+function rooftopPassages(): Passage[] {
+  const out: Passage[] = PIPE_HOUSES.flatMap((i): Passage[] => {
+    const r = ROOF_ROW[i];
+    const pipe = drainpipe(i);
+    const top = { x: pipe.x - pipe.side * 110, y: RIDGE_Y + 5, z: r.cz };
+    return [
+      {
+        id: `roof-${i}-up`,
+        kind: "gutter",
+        label: "Shimmy up the drainpipe",
+        from: { x: pipe.x, y: EXT_Y, z: pipe.z - 40 },
+        to: top,
+        yaw: pipe.side > 0 ? FACE_W : FACE_E,
+        draw: false,
+        toast: "Up on the rooftop highway! Walk the wires and yardsticks from roof to roof.",
+      },
+      {
+        id: `roof-${i}-down`,
+        kind: "gutter",
+        label: "Slide down the drainpipe",
+        from: { x: pipe.x - pipe.side * 30, y: RIDGE_Y, z: r.cz },
+        to: { x: pipe.x, y: EXT_Y + 5, z: pipe.z - 90 },
+        yaw: FACE_N,
+        draw: false,
+        reach: 60,
+      },
+    ];
+  });
+  out.push({
+    id: "roof-zipline",
+    kind: "gutter",
+    label: "Zip down the clothesline",
+    from: ZIPLINE.top,
+    to: { ...ZIPLINE.bottom, y: ZIPLINE.bottom.y + 5 },
+    yaw: FACE_E,
+    draw: false,
+    toast: "Zzzzzip! Down the clothesline to the sidewalk.",
+    reach: 60,
+  });
+  return out;
+}
+
 export const PASSAGES: Passage[] = [
+  ...sewerPassages(),
+  ...rooftopPassages(),
   // Andy's room <-> attic
   { id: "andy-vent", kind: "vent", label: "Crawl into the air vent", from: { x: -420, y: UPPER_Y, z: 470 }, to: { x: -300, y: EAVE_Y, z: 200 }, yaw: Math.PI, draw: true },
   { id: "attic-vent", kind: "vent", label: "Drop back into Andy's room", from: { x: -420, y: EAVE_Y, z: 300 }, to: { x: -360, y: UPPER_Y, z: 420 }, yaw: 0, draw: true },

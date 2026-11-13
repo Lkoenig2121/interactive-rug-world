@@ -14,6 +14,8 @@ import { DrivingController } from "./DrivingController";
 import { DayNight } from "./explore/DayNight";
 import { Passages } from "./explore/Passages";
 import { Rides } from "./explore/Rides";
+import { Rooftops } from "./explore/Rooftops";
+import { Sewer } from "./explore/Sewer";
 import { SkyDome } from "./explore/SkyDome";
 import { Stars } from "./explore/Stars";
 import { Sunnyside } from "./explore/Sunnyside";
@@ -109,6 +111,8 @@ export default function Experience() {
           <Weather />
           <Friends />
           <Sunnyside />
+          <Sewer />
+          <Rooftops />
         </group>
         {inSpace && <SpaceLevel />}
         <Toy />

@@ -198,8 +198,8 @@ export function Friends() {
 
 const SHELF_X = ANDY_ROOM.x1 - 2;
 const SHELF_D = 22;
-const ROWS = [UPPER_Y + 100, UPPER_Y + 150];
 const PER_ROW = 6;
+const ROWS = Array.from({ length: Math.ceil(FRIENDS.length / PER_ROW) }, (_, i) => UPPER_Y + 90 + i * 46);
 const SLOT_Z0 = -6;
 const SLOT_GAP = 28;
 
@@ -225,7 +225,7 @@ export function FriendShelf() {
           ))}
         </group>
       ))}
-      <Sign text="Friends Found" position={[SHELF_X - 0.5, ROWS[1] + 42, z0 + len / 2]} size={[90, 16]} rotationY={-Math.PI / 2} bg="#2b2d42" fg="#ffd166" />
+      <Sign text="Friends Found" position={[SHELF_X - 0.5, ROWS[ROWS.length - 1] + 40, z0 + len / 2]} size={[90, 16]} rotationY={-Math.PI / 2} bg="#2b2d42" fg="#ffd166" />
       {FRIENDS.map((f, i) => {
         const y = ROWS[Math.floor(i / PER_ROW)];
         const z = SLOT_Z0 + (i % PER_ROW) * SLOT_GAP;

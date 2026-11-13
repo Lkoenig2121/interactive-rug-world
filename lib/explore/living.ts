@@ -151,6 +151,7 @@ export function windPush(w: { wind: number; windAngle: number }, now: number) {
 
 /** Under a roof: Andy's house or a town building, so rain and snow stay outside. */
 export function underRoof(p: { x: number; y: number; z: number }) {
+  if (p.y < EXT_Y - 300) return true;
   if (inRect(p, HOUSE, 10) && p.y < EXT_Y + 1000) return true;
   for (const l of LANDMARKS) if (l.solid && l.h > 0 && p.y < EXT_Y + l.h && insideLandmark(l, p)) return true;
   return false;

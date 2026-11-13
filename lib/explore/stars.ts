@@ -1,5 +1,7 @@
 import { EAVE_Y, EXT_Y, HOUSE, ROOF_TOP_Y } from "../house/layout";
 import { BARN_DUCT, BARN_DUCT_Y, districtAt, landmarkById, SID_UPSTAIRS_Y, toWorld, type DistrictId } from "../town/config";
+import { ROOF_STARS } from "./rooftops";
+import { CHANNEL, HIGH_LEDGE, sewerWorld } from "./sewer";
 import { DOME, TOWER_TOP } from "./sky";
 
 /** Gold star tokens hidden up high, in secret rooms and (some) only at night. */
@@ -38,6 +40,11 @@ export const STARS: StarSpot[] = [
   on("sid", "Sid's chimney", -landmarkById.sid.w / 2 + 120, -100, landmarkById.sid.h + 540),
   { ...on("sid", "Sid's upstairs", 450, -350, 0), y: SID_UPSTAIRS_Y + 30 },
   on("sid", "Sid's yard at night", -500, -1700, 40, { night: true }),
+  ...ROOF_STARS.map((s) => ({ ...s, district: "andy" as const })),
+
+  // Storm drains
+  { id: "sewer-ledge", label: "Storm drain high ledge", district: "andy", ...sewerWorld((HIGH_LEDGE.x0 + HIGH_LEDGE.x1) / 2, (HIGH_LEDGE.z0 + HIGH_LEDGE.z1) / 2 - 60, HIGH_LEDGE.h + 30) },
+  { id: "sewer-waterfall", label: "Behind the drain waterfall", district: "andy", ...sewerWorld(CHANNEL.x0 + 70, 0, 30) },
 
   // Pizza Planet district
   on("pizza", "Rocket nose cone", -pizza.w / 2 - 900, pizza.d / 2 + 200, 3260),

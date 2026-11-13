@@ -1,5 +1,6 @@
 import { addBlocks, blockWalls, roofHeight, type Block } from "../town/blocks";
 import { TOWN_WALLS } from "../town/colliders";
+import { sewerFloor } from "../explore/sewer";
 import { SURFACES } from "../town/config";
 import { RUG } from "../world/roads";
 import {
@@ -151,6 +152,8 @@ export const onRug = (p: { x: number; z: number }) => inRect(p, RUG_RECT);
 export function groundHeight(x: number, z: number, y: number) {
   const p = { x, z };
   const roof = roofHeight(x, z, y);
+  const sewer = sewerFloor(x, z, y);
+  if (sewer !== null) return Math.max(sewer, roof ?? -Infinity);
   if (roof !== null) return Math.max(roof, surfaceHeight(p, y) ?? -Infinity);
   if (inRect(p, STAIR_VOID)) {
     const t = Math.min(1, Math.max(0, (x - STAIR_VOID.x0) / (STAIR_VOID.x1 - STAIR_VOID.x0)));

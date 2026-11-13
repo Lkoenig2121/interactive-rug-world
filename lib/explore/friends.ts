@@ -1,6 +1,8 @@
 import { EXT_Y } from "../house/layout";
 import { landmarkById, toWorld } from "../town/config";
 import type { WorldEventKind } from "./events";
+import { ROOF_FRIEND } from "./rooftops";
+import { sewerWorld } from "./sewer";
 
 /** Lost toys you can recruit; they follow you home and live on the shelf in Andy's room. */
 export type FriendKind = "teddy" | "duck" | "dino" | "rocket" | "soldier" | "bunny" | "car" | "horse" | "robot" | "frog" | "bendy" | "ball";
@@ -33,6 +35,8 @@ export const FRIENDS: Friend[] = [
   { id: "clover", name: "Clover", kind: "bunny", color: "#f8edeb", accent: "#ffafcc", line: "A floppy-eared bunny who missed nap time at Sunnyside.", spot: at("daycare", 1200, landmarkById.daycare.d / 2 + 500) },
   { id: "vroom", name: "Vroom", kind: "car", color: "#3a86ff", accent: "#ffbe0b", line: "A pull-back racer who rolled all the way to the grocery store.", spot: at("grocery", 1200, landmarkById.grocery.d / 2 + 700) },
   { id: "pip", name: "Pip", kind: "horse", color: "#bc6c25", accent: "#fefae0", line: "A rocking horse who wandered off from the Roundup.", spot: at("western", 0, 3000) },
+  { id: "gilly", name: "Gilly", kind: "frog", color: "#2a9d8f", accent: "#ffd166", line: "A wind-up scuba frog who swam down a storm drain and couldn't find the way out.", spot: sewerWorld(220, 2700) },
+  { id: "chute", name: "Chute", kind: "soldier", color: "#6c757d", accent: "#f4f1de", line: "A parachute soldier whose chute snagged on a rooftop. He's been stuck up here for days.", spot: ROOF_FRIEND },
   { id: "bolt", name: "Bolt", kind: "robot", color: "#e76f51", accent: "#d9d9d9", line: "The wind-up robot that fell from the sky as a meteor!", event: "meteor" },
   { id: "hopper", name: "Hopper", kind: "frog", color: "#58b368", accent: "#ffffff", line: "A jumping frog who mailed himself across town by mistake.", event: "mail" },
   { id: "buddy", name: "Buddy", kind: "bendy", color: "#3a86ff", accent: "#ffd166", line: "A bendy figure, a little chewed, rescued from the neighbor's dog.", event: "dog" },
