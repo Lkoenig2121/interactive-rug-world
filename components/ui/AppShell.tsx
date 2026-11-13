@@ -13,6 +13,7 @@ import { PlaceBadge, TownDirections, TownNavigation } from "./TownNavigation";
 import { ArcadeCabinet } from "./ArcadeCabinet";
 import { ArrowPicker } from "./ArrowPicker";
 import { EventChip, ExploreStatus, LaunchCountdown } from "./ExploreHud";
+import { Radar } from "./Radar";
 import { HouseToolbar, RoomToolbar, ToyToolbar, WorldDock } from "./Toolbars";
 
 const Experience = dynamic(() => import("@/components/three/Experience"), {
@@ -164,6 +165,7 @@ export function AppShell() {
 
       {/* Left column: details & navigation */}
       <div className="pointer-events-none absolute left-3 top-24 flex flex-col gap-3 sm:left-4 sm:top-28">
+        <Radar />
         <InfoPanel />
         {mode === "toy" ? <TownNavigation /> : mode !== "interior" && mode !== "transition" && mode !== "house" && <NavigationPanel />}
       </div>

@@ -333,6 +333,9 @@ export const BARN_DUCT_Y = EXT_Y + 1000;
 export const BARN_DUCT = { x0: -4300, x1: 1900, z0: -2900, z1: -2700 };
 /** Sid's attic loft over the back half of the house. */
 export const SID_LOFT = { x0: -740, x1: 740, z0: -565, z1: -100 };
+/** Sid's staircase (local), climbing toward the back from the living room to the loft's front edge. */
+export const SID_STAIRS = { x0: 540, x1: 720, z0: SID_LOFT.z1, z1: 380, steps: 16 };
+const sidStairTread = (SID_STAIRS.z1 - SID_STAIRS.z0) / SID_STAIRS.steps;
 
 const plane = landmarkById.plane;
 export const PLANE_FLOOR = EXT_Y + 160;
@@ -345,6 +348,17 @@ export const SURFACES: Surface[] = [
     ramp: { axis: "z", from: planeDoor.z - 480, to: planeDoor.z, y0: EXT_Y },
   },
   { rect: localRect(landmarkById.sid, SID_LOFT.x0, SID_LOFT.z0, SID_LOFT.x1, SID_LOFT.z1), y: SID_UPSTAIRS_Y },
+  // Shifted half a tread so the slope passes through the middle of each step top.
+  {
+    rect: localRect(landmarkById.sid, SID_STAIRS.x0, SID_STAIRS.z0, SID_STAIRS.x1, SID_STAIRS.z1 + sidStairTread / 2),
+    y: SID_UPSTAIRS_Y,
+    ramp: {
+      axis: "z",
+      from: toWorld(landmarkById.sid, 0, SID_STAIRS.z1 + sidStairTread / 2).z,
+      to: toWorld(landmarkById.sid, 0, SID_STAIRS.z0 + sidStairTread / 2).z,
+      y0: EXT_Y,
+    },
+  },
   { rect: localRect(landmarkById.toybarn, BARN_DUCT.x0, BARN_DUCT.z0, BARN_DUCT.x1, BARN_DUCT.z1), y: BARN_DUCT_Y },
   {
     rect: { x0: DOME.x - DOME.r, x1: DOME.x + DOME.r, z0: DOME.z - DOME.r, z1: DOME.z + DOME.r },

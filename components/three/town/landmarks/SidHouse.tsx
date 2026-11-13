@@ -1,6 +1,6 @@
 "use client";
 
-import type { Landmark } from "@/lib/town/config";
+import { SID_STAIRS, SID_UPSTAIRS_Y, type Landmark } from "@/lib/town/config";
 import { EXT_Y } from "@/lib/house/layout";
 import { INTERIOR_SOLIDS } from "@/lib/town/interiors";
 import type { Builder } from "../builder";
@@ -47,6 +47,30 @@ function springBot(b: Builder, x: number, z: number) {
   b.use("gloss").cone(x, 92, z, 8, 14, "#7a2e2e", 8);
 }
 
+/** Creaky staircase from the living room up to the loft (its walkable slope is in SURFACES). */
+function buildSidStairs(b: Builder) {
+  const { x0, x1, z0, z1, steps } = SID_STAIRS;
+  const rise = SID_UPSTAIRS_Y - EXT_Y;
+  const tread = (z1 - z0) / steps;
+  const cx = (x0 + x1) / 2;
+  const w = x1 - x0;
+  for (let i = 0; i < steps; i++) {
+    const top = ((i + 1) * rise) / steps;
+    const z = z1 - (i + 0.5) * tread;
+    b.use("wood").box(cx, 0, z, w - 10, top - 3, tread, "#4a3728");
+    b.use("wood").box(cx, top - 3, z - 2, w, 3, tread + 4, i % 3 === 1 ? "#5b4330" : "#6b4a2b");
+  }
+  // Banister on the open (west) side, with a few balusters missing.
+  const len = Math.hypot(z1 - z0, rise);
+  const angle = Math.atan2(rise, z1 - z0);
+  b.use("wood").cbox(x0 + 4, rise / 2 + 85, (z0 + z1) / 2, 6, 6, len, "#3a2c20", { rx: angle });
+  for (let i = 1; i < steps; i += 2) {
+    if (i === 5 || i === 11) continue;
+    const top = ((i + 1) * rise) / steps;
+    b.use("wood").box(x0 + 4, top, z1 - (i + 0.5) * tread, 3, 85, 3, "#3a2c20");
+  }
+}
+
 function buildSid(b: Builder, l: Landmark) {
   const hw = l.w / 2;
   const hd = l.d / 2;
@@ -56,9 +80,7 @@ function buildSid(b: Builder, l: Landmark) {
   // Messy living room extras: pizza boxes, a lamp, stairs to the dark upstairs.
   b.use("paint").box(-40, 50, 90, 70, 8, 70, "#c0392b");
   b.use("paint").box(-10, 58, 70, 70, 8, 70, "#f4d35e");
-  b.use("wood").box(620, 0, -200, 220, 18, 900, "#6b4a2b");
-  for (let i = 0; i < 8; i++) b.use("wood").box(620, 18 + i * 22, -200 - i * 28, 220, 18, 90, i % 2 ? "#5b4330" : "#6b4a2b");
-  b.use("paint").box(620, 200, -480, 220, 8, 80, "#3a2a22");
+  buildSidStairs(b);
   b.use("metal").cyl(-600, 0, 200, 8, 140, "#3b4148", 8);
   b.use("glow").sphere(-600, 150, 200, 18, "#fff3b0", 1, 8);
   // Windows with dark drawn curtains, one boarded up.

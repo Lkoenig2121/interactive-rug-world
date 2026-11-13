@@ -98,7 +98,7 @@ export const INTERIOR_SOLIDS: Record<string, PropBox[]> = {
     { x: -380, z: -80, w: 420, d: 140, h: 90, kind: "couch" },
     { x: 420, z: -350, w: 40, d: 280, h: 160, kind: "tv" },
     { x: -20, z: 80, w: 160, d: 160, h: 50, kind: "table" },
-    { x: 480, z: 280, w: 280, d: 80, h: 110, kind: "desk" },
+    { x: 330, z: 280, w: 280, d: 80, h: 110, kind: "desk" },
     { x: -570, z: -120, w: 420, d: 140, h: 90, kind: "workbench" },
     { x: -480, z: -525, w: 380, d: 80, h: 110, kind: "kitchen" },
     { x: 380, z: -525, w: 380, d: 80, h: 110, kind: "kitchen" },

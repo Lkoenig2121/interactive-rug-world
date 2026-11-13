@@ -8,7 +8,7 @@ import { EAVE_Y, EXT_Y, GROUND_Y, HOUSE, inRect, SHELL } from "@/lib/house/layou
 import { ATTIC } from "@/lib/house/walkable";
 import { runtime } from "@/lib/runtime";
 import { onAndyRoof } from "@/lib/town/blocks";
-import { BARN_DUCT, BARN_DUCT_Y, landmarkById, SID_LOFT, SID_UPSTAIRS_Y } from "@/lib/town/config";
+import { BARN_DUCT, BARN_DUCT_Y, landmarkById, SID_LOFT, SID_STAIRS, SID_UPSTAIRS_Y } from "@/lib/town/config";
 import type { Builder } from "../town/builder";
 import { Built, Sign } from "../town/parts";
 
@@ -108,7 +108,9 @@ function buildSidLoft(b: Builder) {
     const { x0, x1, z0, z1 } = SID_LOFT;
     const y = SID_UPSTAIRS_Y - EXT_Y;
     b.use("planks").box((x0 + x1) / 2, y - 14, (z0 + z1) / 2, x1 - x0, 14, z1 - z0, "#4a3a2c");
-    b.use("wood").box((x0 + x1) / 2, y, z1 - 6, x1 - x0, 40, 6, "#3a2c20");
+    // Railing along the front edge, open where the stairs come up.
+    b.use("wood").box((x0 + SID_STAIRS.x0) / 2, y, z1 - 6, SID_STAIRS.x0 - x0, 40, 6, "#3a2c20");
+    b.use("wood").box((SID_STAIRS.x1 + x1) / 2, y, z1 - 6, x1 - SID_STAIRS.x1, 40, 6, "#3a2c20");
     // Mattress, a skull poster and shelves of mixed-up toys.
     b.use("paint").box(-450, y, -400, 260, 30, 160, "#5b5f4a");
     b.use("paint").box(-450, y + 30, -460, 260, 8, 40, "#d9d4c8");
