@@ -1,11 +1,14 @@
 import { EXT_Y } from "../house/layout";
 import { landmarkById, toWorld } from "../town/config";
 import type { WorldEventKind } from "./events";
+import { BAGGAGE_FRIEND, baggageWorld } from "./baggage";
+import { CLAW_FRIEND, CLAW_MOUND, clawWorld } from "./clawMachine";
+import { CATWALK, FURNACE_FRIEND, furnaceWorld } from "./incinerator";
 import { ROOF_FRIEND } from "./rooftops";
 import { sewerWorld } from "./sewer";
 
 /** Lost toys you can recruit; they follow you home and live on the shelf in Andy's room. */
-export type FriendKind = "teddy" | "duck" | "dino" | "rocket" | "soldier" | "bunny" | "car" | "horse" | "robot" | "frog" | "bendy" | "ball";
+export type FriendKind = "teddy" | "duck" | "dino" | "rocket" | "soldier" | "bunny" | "car" | "horse" | "robot" | "frog" | "bendy" | "ball" | "alien";
 
 export interface Friend {
   id: string;
@@ -37,6 +40,9 @@ export const FRIENDS: Friend[] = [
   { id: "pip", name: "Pip", kind: "horse", color: "#bc6c25", accent: "#fefae0", line: "A rocking horse who wandered off from the Roundup.", spot: at("western", 0, 3000) },
   { id: "gilly", name: "Gilly", kind: "frog", color: "#2a9d8f", accent: "#ffd166", line: "A wind-up scuba frog who swam down a storm drain and couldn't find the way out.", spot: sewerWorld(220, 2700) },
   { id: "chute", name: "Chute", kind: "soldier", color: "#6c757d", accent: "#f4f1de", line: "A parachute soldier whose chute snagged on a rooftop. He's been stuck up here for days.", spot: ROOF_FRIEND },
+  { id: "tuggy", name: "Tuggy", kind: "car", color: "#ffbe0b", accent: "#1d1d1f", line: "A little baggage tug who fell off a luggage cart and has been going round in circles ever since.", spot: baggageWorld(BAGGAGE_FRIEND.x, BAGGAGE_FRIEND.z) },
+  { id: "blip", name: "Blip", kind: "alien", color: "#9b5de5", accent: "#00f5d4", line: "A one-eyed squeaky alien who got tired of waiting to be chosen and wants to see the world.", spot: clawWorld(CLAW_FRIEND.x, CLAW_FRIEND.z, CLAW_MOUND.h) },
+  { id: "scrap", name: "Scrap", kind: "robot", color: "#8d6e4f", accent: "#adb5bd", line: "A rusty wind-up robot who climbed the catwalk to get away from the furnace.", spot: furnaceWorld(FURNACE_FRIEND.x, FURNACE_FRIEND.z, CATWALK.h) },
   { id: "bolt", name: "Bolt", kind: "robot", color: "#e76f51", accent: "#d9d9d9", line: "The wind-up robot that fell from the sky as a meteor!", event: "meteor" },
   { id: "hopper", name: "Hopper", kind: "frog", color: "#58b368", accent: "#ffffff", line: "A jumping frog who mailed himself across town by mistake.", event: "mail" },
   { id: "buddy", name: "Buddy", kind: "bendy", color: "#3a86ff", accent: "#ffd166", line: "A bendy figure, a little chewed, rescued from the neighbor's dog.", event: "dog" },

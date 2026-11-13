@@ -1,5 +1,8 @@
 import { EAVE_Y, EXT_Y, HOUSE, ROOF_TOP_Y } from "../house/layout";
 import { BARN_DUCT, BARN_DUCT_Y, districtAt, landmarkById, SID_UPSTAIRS_Y, toWorld, type DistrictId } from "../town/config";
+import { BAGGAGE_STAR, baggageWorld } from "./baggage";
+import { CLAW_STAR, clawWorld } from "./clawMachine";
+import { FURNACE_STAR, furnaceWorld } from "./incinerator";
 import { ROOF_STARS } from "./rooftops";
 import { CHANNEL, HIGH_LEDGE, sewerWorld } from "./sewer";
 import { DOME, TOWER_TOP } from "./sky";
@@ -45,6 +48,11 @@ export const STARS: StarSpot[] = [
   // Storm drains
   { id: "sewer-ledge", label: "Storm drain high ledge", district: "andy", ...sewerWorld((HIGH_LEDGE.x0 + HIGH_LEDGE.x1) / 2, (HIGH_LEDGE.z0 + HIGH_LEDGE.z1) / 2 - 60, HIGH_LEDGE.h + 30) },
   { id: "sewer-waterfall", label: "Behind the drain waterfall", district: "andy", ...sewerWorld(CHANNEL.x0 + 70, 0, 30) },
+
+  // Secret hideouts
+  { id: "baggage-maze", label: "Heart of the baggage maze", district: "airport", ...baggageWorld(BAGGAGE_STAR.x, BAGGAGE_STAR.z, 30) },
+  { id: "claw-rail", label: "Claw machine gantry", district: "pizza", ...clawWorld(CLAW_STAR.x, CLAW_STAR.z, CLAW_STAR.h) },
+  { id: "incinerator-catwalk", label: "Over the incinerator", district: "industrial", ...furnaceWorld(FURNACE_STAR.x, FURNACE_STAR.z, FURNACE_STAR.h) },
 
   // Pizza Planet district
   on("pizza", "Rocket nose cone", -pizza.w / 2 - 900, pizza.d / 2 + 200, 3260),

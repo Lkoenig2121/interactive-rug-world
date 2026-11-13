@@ -15,7 +15,7 @@ import { FOV, toyCameraPose } from "@/lib/three/cameraPoses";
 import { runtime, type Mount } from "@/lib/runtime";
 import { useStore } from "@/lib/store";
 import { landmarkById, toWorld } from "@/lib/town/config";
-import { inSewer, SEWER } from "@/lib/explore/sewer";
+import { pocketAt } from "@/lib/explore/pockets";
 import { placeAt, townInteraction } from "@/lib/town/interact";
 import { nearestOnRoute, remainingLength, streetForSegment } from "@/lib/town/navigation";
 import { clamp, wrapAngle, yawToDir } from "@/lib/world/geometry";
@@ -427,7 +427,8 @@ export function ToyController() {
         }
         const wantVy = updraft && climb >= 0 ? 1800 : t.gliding && !climb ? -GLIDE_SINK : (climb || autoClimb) * 700;
         t.vy += (wantVy - t.vy) * Math.min(1, dt * 4);
-        const ceiling = inSpace ? SPACE.y + 2600 : inSewer(t) ? SEWER.y + SEWER.h - 50 : flightCeiling(store.stars.length);
+        const pocket = pocketAt(t);
+        const ceiling = inSpace ? SPACE.y + 2600 : pocket ? pocket.y + pocket.h - 50 : flightCeiling(store.stars.length);
         if (t.y >= ceiling - 2 && climb > 0 && !inSpace && clock.elapsedTime - ceilingToast.current > 8) {
           ceilingToast.current = clock.elapsedTime;
           store.showToast(
@@ -506,7 +507,8 @@ export function ToyController() {
       }
     }
     pose.pos.y = Math.max(pose.pos.y, groundAt(pose.pos.x, pose.pos.z, pose.pos.y) + 6);
-    if (inSewer(t)) pose.pos.y = Math.min(pose.pos.y, SEWER.y + SEWER.h - 20);
+    const below = pocketAt(t);
+    if (below) pose.pos.y = Math.min(pose.pos.y, below.y + below.h - 20);
     if (!camPos.current || runtime.town.snapCamera) {
       camPos.current = pose.pos.clone();
       runtime.town.snapCamera = false;
@@ -549,7 +551,7 @@ export function ToyController() {
     navTimer.current -= dt;
     if (navTimer.current <= 0) {
       navTimer.current = 0.4;
-      store.setPlace(inSpace ? { district: "Planet Zurbo", landmark: Math.hypot(t.x - HOME_PAD.x, t.z - HOME_PAD.z) < 900 ? "Launch pad" : null } : inSewer(t) ? { district: "Storm drains", landmark: null } : placeAt(t));
+      store.setPlace(inSpace ? { district: "Planet Zurbo", landmark: Math.hypot(t.x - HOME_PAD.x, t.z - HOME_PAD.z) < 900 ? "Launch pad" : null } : below ? { district: below.name, landmark: null } : placeAt(t));
       if (!inSpace && store.townNavigating && route && store.townDestination && route.points.length > 1) {
         const nav = runtime.town.nav;
         const near = nearestOnRoute(route.points, t);

@@ -2,13 +2,16 @@ import { EAVE_Y, EXT_Y, GROUND_Y, HOUSE, SHELL, UPPER_Y } from "../house/layout"
 import { roofHeight } from "../town/blocks";
 import { BARN_DUCT_Y, landmarkById, toWorld } from "../town/config";
 import { SUNNY_DUCT } from "../town/interiors";
+import { BAGGAGE_CHUTE, BAGGAGE_EXIT, BAGGAGE_LADDER, BAGGAGE_START, baggageWorld } from "./baggage";
+import { CLAW_ARRIVE, CLAW_EXIT, CLAW_FLAP, CLAW_MOUND, CLAW_PAD, CLAW_RAIL, clawWorld, PRIZE_CHUTE } from "./clawMachine";
+import { CATWALK, FURNACE_ARRIVE, FURNACE_EXIT, FURNACE_HATCH, FURNACE_LADDER, furnaceWorld, MAGNET_PAD } from "./incinerator";
 import { drainpipe, PIPE_HOUSES, RIDGE_Y, ROOF_ROW, ZIPLINE } from "./rooftops";
 import { SEWER_EXITS, sewerWorld } from "./sewer";
 
 /** Toy-sized secret passages: press E at `from` to pop out at `to`. */
 export interface Passage {
   id: string;
-  kind: "vent" | "ladder" | "slot" | "petdoor" | "dryer" | "gutter" | "door" | "manhole";
+  kind: "vent" | "ladder" | "slot" | "petdoor" | "dryer" | "gutter" | "door" | "manhole" | "chute";
   label: string;
   from: { x: number; y: number; z: number };
   to: { x: number; y: number; z: number };
@@ -124,6 +127,103 @@ function sewerPassages(): Passage[] {
   ]);
 }
 
+function hideoutPassages(): Passage[] {
+  return [
+    {
+      id: "baggage-down",
+      kind: "chute",
+      label: "Dive down the baggage chute",
+      from: BAGGAGE_CHUTE,
+      to: baggageWorld(BAGGAGE_START.x, BAGGAGE_START.z),
+      yaw: FACE_E,
+      draw: false,
+      toast: "Down in baggage handling! Find your way through the maze — and mind the open chutes.",
+    },
+    {
+      id: "baggage-up",
+      kind: "ladder",
+      label: "Climb up to the terminal",
+      from: baggageWorld(BAGGAGE_LADDER.x, BAGGAGE_LADDER.z),
+      to: BAGGAGE_EXIT,
+      yaw: FACE_S,
+      draw: false,
+      toast: "Back up in the terminal.",
+    },
+    {
+      id: "claw-in",
+      kind: "chute",
+      label: "Crawl in through the prize flap",
+      from: CLAW_FLAP,
+      to: clawWorld(CLAW_ARRIVE.x, CLAW_ARRIVE.z),
+      yaw: FACE_N,
+      draw: false,
+      toast: "Inside the claw machine! Ooooh… climb the aliens and catch a ride on the claw.",
+    },
+    {
+      id: "claw-ride",
+      kind: "chute",
+      label: "Hold on to the claw",
+      from: clawWorld(CLAW_PAD.x, CLAW_PAD.z, CLAW_MOUND.h),
+      to: clawWorld(CLAW_RAIL.x0 + 80, (CLAW_RAIL.z0 + CLAW_RAIL.z1) / 2, CLAW_RAIL.h),
+      yaw: FACE_E,
+      draw: false,
+      toast: "The claw has chosen! Up to the gantry rail you go.",
+      reach: 80,
+    },
+    {
+      id: "claw-out",
+      kind: "chute",
+      label: "Slide down the prize chute",
+      from: clawWorld((PRIZE_CHUTE.x0 + PRIZE_CHUTE.x1) / 2, (PRIZE_CHUTE.z0 + PRIZE_CHUTE.z1) / 2),
+      to: CLAW_EXIT,
+      yaw: FACE_S,
+      draw: false,
+      toast: "Ka-chunk! Out of the prize chute and back in Pizza Planet.",
+      reach: 110,
+    },
+    {
+      id: "furnace-down",
+      kind: "chute",
+      label: "Squeeze through the sorting hatch",
+      from: FURNACE_HATCH,
+      to: furnaceWorld(FURNACE_ARRIVE.x, FURNACE_ARRIVE.z),
+      yaw: FACE_E,
+      draw: false,
+      toast: "The incinerator belt! Run against it, and whatever you do, don't ride it to the end.",
+    },
+    {
+      id: "furnace-up",
+      kind: "ladder",
+      label: "Climb up to the landfill",
+      from: furnaceWorld(FURNACE_LADDER.x, FURNACE_LADDER.z),
+      to: FURNACE_EXIT,
+      yaw: FACE_S,
+      draw: false,
+      toast: "Phew — fresh air. Well, landfill air.",
+    },
+    {
+      id: "furnace-magnet",
+      kind: "chute",
+      label: "Grab the scrap magnet",
+      from: furnaceWorld(MAGNET_PAD.x, MAGNET_PAD.z),
+      to: furnaceWorld(MAGNET_PAD.x, (CATWALK.z0 + CATWALK.z1) / 2, CATWALK.h),
+      yaw: FACE_E,
+      draw: false,
+      toast: "Clunk! The magnet hauls you up to the catwalk.",
+      reach: 90,
+    },
+    {
+      id: "furnace-catwalk-down",
+      kind: "ladder",
+      label: "Climb down to the landing",
+      from: furnaceWorld(CATWALK.x0 + 40, (CATWALK.z0 + CATWALK.z1) / 2, CATWALK.h),
+      to: furnaceWorld(FURNACE_ARRIVE.x, FURNACE_ARRIVE.z),
+      yaw: FACE_E,
+      draw: false,
+    },
+  ];
+}
+
 function rooftopPassages(): Passage[] {
   const out: Passage[] = PIPE_HOUSES.flatMap((i): Passage[] => {
     const r = ROOF_ROW[i];
@@ -168,6 +268,7 @@ function rooftopPassages(): Passage[] {
 
 export const PASSAGES: Passage[] = [
   ...sewerPassages(),
+  ...hideoutPassages(),
   ...rooftopPassages(),
   // Andy's room <-> attic
   { id: "andy-vent", kind: "vent", label: "Crawl into the air vent", from: { x: -420, y: UPPER_Y, z: 470 }, to: { x: -300, y: EAVE_Y, z: 200 }, yaw: Math.PI, draw: true },

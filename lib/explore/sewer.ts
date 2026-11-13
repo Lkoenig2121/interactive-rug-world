@@ -1,18 +1,12 @@
 import { EXT_Y } from "../house/layout";
 import { landmarkById, toWorld } from "../town/config";
+import { inRect, POCKET_Y, type Pocket, type Rect } from "./underground";
 
 /**
  * Storm drains: a tunnel network deep under the empty country south of Andy's street, reached by
  * manholes around town. Everything below is in sewer-local coordinates around `SEWER.x/z`.
  */
-export const SEWER = { x: 8000, z: -10000, y: EXT_Y - 2000, h: 420 };
-
-export interface Rect {
-  x0: number;
-  x1: number;
-  z0: number;
-  z1: number;
-}
+export const SEWER = { x: 8000, z: -10000, y: POCKET_Y, h: 420 };
 
 /** A plus-shaped network: the central hub and four arms. */
 export const SEWER_ROOMS: Rect[] = [
@@ -57,23 +51,7 @@ export const HIGH_LEDGE = { x0: -950, x1: -350, z0: -1000, z1: -700, h: 240 };
 
 export const sewerWorld = (x: number, z: number, h = 0) => ({ x: SEWER.x + x, y: SEWER.y + h, z: SEWER.z + z });
 
-const inRect = (r: Rect, x: number, z: number) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
-
-/** True when a world point is down in the drains. */
-export function inSewer(p: { x: number; y: number; z: number }) {
-  if (p.y > EXT_Y - 300) return false;
-  const x = p.x - SEWER.x;
-  const z = p.z - SEWER.z;
-  return SEWER_ROOMS.some((r) => inRect(r, x, z));
-}
-
-/** Floor height in the drains for something at height `y`, or null when not down there. */
-export function sewerFloor(x: number, z: number, y: number): number | null {
-  if (y > EXT_Y - 300) return null;
-  const lx = x - SEWER.x;
-  const lz = z - SEWER.z;
-  return lx >= -3700 && lx <= 3700 && lz >= -3100 && lz <= 3100 ? SEWER.y : null;
-}
+export const SEWER_POCKET: Pocket = { id: "sewer", name: "Storm drains", ...SEWER, rooms: SEWER_ROOMS };
 
 export const inChannel = (p: { x: number; z: number }) => inRect(CHANNEL, p.x - SEWER.x, p.z - SEWER.z);
 

@@ -3,11 +3,12 @@
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
-import { CHANNEL, CURRENT, HIGH_LEDGE, inChannel, inSewer, PIPE_STEPS, SEWER, SEWER_EXITS, SEWER_OUTLINE, SEWER_ROOMS } from "@/lib/explore/sewer";
-import { EXT_Y } from "@/lib/house/layout";
+import { pocketAt } from "@/lib/explore/pockets";
+import { CHANNEL, CURRENT, HIGH_LEDGE, inChannel, PIPE_STEPS, SEWER, SEWER_EXITS, SEWER_OUTLINE, SEWER_ROOMS } from "@/lib/explore/sewer";
 import { runtime } from "@/lib/runtime";
 import type { Builder } from "../town/builder";
 import { Built, Sign } from "../town/parts";
+import { buildLadder, PocketGroup, PocketLamp } from "./pocketParts";
 
 const H = SEWER.h;
 const WALL_T = 40;
@@ -21,12 +22,7 @@ function ladderSpot(l: { x: number; z: number }) {
   return { x: l.x, z: Math.sign(l.z) * (edge - 25), ry: 0, face: Math.sign(l.z) > 0 ? Math.PI : 0 };
 }
 
-function ladder(b: Builder, x: number, z: number, ry: number) {
-  b.at(x, 0, z, ry, () => {
-    for (const s of [-1, 1]) b.use("metal").box(s * 20, 0, 0, 5, H, 5, "#6b7280");
-    for (let y = 22; y < H; y += 28) b.use("metal").box(0, y, 0, 40, 3, 4, "#9aa3ad");
-  });
-}
+const ladder = (b: Builder, x: number, z: number, ry: number) => buildLadder(b, x, z, ry, H);
 
 function buildTunnels(b: Builder) {
   b.at(SEWER.x, SEWER.y, SEWER.z, 0, () => {
@@ -129,21 +125,16 @@ function buildCovers(b: Builder) {
 
 const FOAM = 28;
 
-/** Storm drains: drawn only while you're down there; the stream carries you and a lamp follows you. */
+/** Storm drains: drawn only while you're down there; the stream carries you along. */
 export function Sewer() {
-  const group = useRef<THREE.Group>(null);
-  const light = useRef<THREE.PointLight>(null);
   const foam = useRef<THREE.Group>(null);
   const seeds = useMemo(() => Array.from({ length: FOAM }, (_, i) => ({ off: (i / FOAM) * (CHANNEL.x1 - CHANNEL.x0), z: ((i * 37) % 180) - 90, s: 4 + (i % 3) * 2 })), []);
 
   useFrame((_, rawDt) => {
     const dt = Math.min(rawDt, 0.05);
     const t = runtime.toy;
-    const down = t.y < EXT_Y - 300;
-    if (group.current) group.current.visible = down;
-    if (!down) return;
-    if (light.current) light.current.position.set(t.x, t.y + 90, t.z);
-    if (inSewer(t) && inChannel(t) && t.mount !== "fly" && t.mount !== "ride" && t.y - SEWER.y < 8) {
+    if (pocketAt(t)?.id !== "sewer") return;
+    if (inChannel(t) && t.mount !== "fly" && t.mount !== "ride" && t.y - SEWER.y < 8) {
       t.x = Math.min(t.x + CURRENT * dt, SEWER.x + CHANNEL.x1 - 40);
     }
     const len = CHANNEL.x1 - CHANNEL.x0;
@@ -157,9 +148,9 @@ export function Sewer() {
   return (
     <group>
       <Built deps={["sewer-covers"]} build={buildCovers} solid={false} />
-      <group ref={group} visible={false}>
+      <PocketLamp />
+      <PocketGroup id="sewer">
         <Built deps={["sewer-tunnels"]} build={buildTunnels} />
-        <pointLight ref={light} intensity={9000} distance={1500} decay={2} color="#ffe2b0" />
         <group ref={foam}>
           {seeds.map((s, i) => (
             <mesh key={i} scale={[s.s * 2, 1, s.s]}>
@@ -184,7 +175,7 @@ export function Sewer() {
             />
           );
         })}
-      </group>
+      </PocketGroup>
     </group>
   );
 }

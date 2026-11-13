@@ -335,6 +335,43 @@ export function FriendModel({ friend }: { friend: Friend }) {
           <Eyes y={22} z={3.3} gap={1.3} r={0.6} />
         </group>
       );
+    case "alien":
+      return (
+        <group>
+          <mesh position={[0, 4, 0]} castShadow>
+            <cylinderGeometry args={[4.5, 6, 8, 14]} />
+            <M c={c} r={0.25} />
+          </mesh>
+          <mesh position={[0, 12, 0]} scale={[1, 1.1, 1]} castShadow>
+            <sphereGeometry args={[6, 16, 12]} />
+            <M c={c} r={0.25} />
+          </mesh>
+          <mesh position={[0, 13, 5]}>
+            <sphereGeometry args={[3, 12, 10]} />
+            <M c="#ffffff" r={0.2} />
+          </mesh>
+          <mesh position={[0, 13, 7.6]}>
+            <sphereGeometry args={[1.4, 8, 6]} />
+            <M c="#1d1d1f" r={0.2} />
+          </mesh>
+          {[-1, 1].map((s) => (
+            <group key={s} position={[s * 3, 18, 0]} rotation-z={s * -0.35}>
+              <mesh position={[0, 3, 0]}>
+                <cylinderGeometry args={[0.4, 0.4, 6, 6]} />
+                <M c={c} />
+              </mesh>
+              <mesh position={[0, 6.5, 0]}>
+                <sphereGeometry args={[1.3, 8, 6]} />
+                <meshBasicMaterial color={a} toneMapped={false} />
+              </mesh>
+            </group>
+          ))}
+          <mesh position={[0, 8.5, 5.4]} rotation-z={Math.PI}>
+            <torusGeometry args={[1.8, 0.35, 6, 12, Math.PI]} />
+            <M c="#1d1d1f" />
+          </mesh>
+        </group>
+      );
     case "ball":
       return (
         <group>
