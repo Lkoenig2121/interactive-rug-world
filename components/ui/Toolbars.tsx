@@ -102,6 +102,9 @@ export function ToyToolbar() {
   const enterWorld = useStore((s) => s.enterWorld);
   const setNav = useStore((s) => s.setNavPanelOpen);
   const navOpen = useStore((s) => s.navPanelOpen);
+  const squeakOut = useStore((s) => s.missionId !== "idle");
+  const showSqueak = useStore((s) => s.showSqueak);
+  const setShowSqueak = useStore((s) => s.setShowSqueak);
   const [fs, toggleFs] = useFullscreen();
   return (
     <div className="pointer-events-auto flex items-center gap-1 rounded-2xl bg-white/85 p-1.5 shadow-2xl shadow-slate-900/20 ring-1 ring-black/5 backdrop-blur-xl">
@@ -115,6 +118,9 @@ export function ToyToolbar() {
       <span className="mx-1 h-6 w-px bg-slate-300/70" />
       <ToyPicker />
       <ToolButton icon="nav" label="Town map" showLabel onClick={() => setNav(!navOpen)} active={navOpen} />
+      {squeakOut && (
+        <ToolButton icon={showSqueak ? "eye" : "eyeOff"} label={showSqueak ? "Hide Squeak" : "Show Squeak"} showLabel onClick={() => setShowSqueak(!showSqueak)} />
+      )}
       <ToolButton icon="layers" label="Explore view" showLabel onClick={exploreHere} />
       <ToolButton icon={fs ? "shrink" : "expand"} label="Toggle fullscreen" onClick={toggleFs} />
     </div>

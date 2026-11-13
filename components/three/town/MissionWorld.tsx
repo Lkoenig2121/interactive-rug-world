@@ -132,6 +132,7 @@ function Badge() {
 /** Follows the player after the rescue, sits on the rug when the mission is done. */
 function SqueakActor() {
   const missionId = useStore((s) => s.missionId);
+  const showSqueak = useStore((s) => s.showSqueak);
   const root = useRef<THREE.Group>(null);
   const follow = useRef(new THREE.Vector3());
   const target = useRef(new THREE.Vector3());
@@ -169,7 +170,7 @@ function SqueakActor() {
 
   if (missionId === "idle") return null;
   return (
-    <group ref={root} userData={{ noPick: true }}>
+    <group ref={root} userData={{ noPick: true }} visible={showSqueak || missionId === "sid-rescue"}>
       <Squeak />
     </group>
   );

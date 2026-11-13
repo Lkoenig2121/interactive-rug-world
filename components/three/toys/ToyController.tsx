@@ -134,7 +134,7 @@ export function ToyController() {
       const target = e.target as HTMLElement | null;
       if (e.repeat || (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA"))) return;
       const s = useStore.getState();
-      if (s.arcadeGame || s.launching) return;
+      if (s.arcadeGame || s.launching || s.cutscene) return;
       const t = runtime.toy;
       const m = t.mount;
       if (m === "ride" && t.ride === "train" && (e.code === "KeyF" || e.code === "KeyH" || e.code === "KeyR")) {
@@ -246,7 +246,7 @@ export function ToyController() {
     runtime.town.clock = clock.elapsedTime;
     const inSpace = store.inSpace;
     const groundAt = inSpace ? spaceGround : groundHeight;
-    const frozen = !!store.arcadeGame;
+    const frozen = !!store.arcadeGame || !!store.cutscene;
 
     t.wings += ((t.mount === "fly" ? 1 : 0) - t.wings) * Math.min(1, dt * 9);
 
@@ -512,6 +512,21 @@ export function ToyController() {
     camPos.current.lerp(pose.pos, Math.min(1, dt * 12));
     camera.position.copy(camPos.current);
     camera.lookAt(pose.target);
+
+    // New-friend cutscene: swing round in front of the toy and its new friend.
+    const cut = store.cutscene;
+    if (cut) {
+      const age = clock.elapsedTime - cut.start;
+      const dir = { x: -Math.sin(t.yaw), z: -Math.cos(t.yaw) };
+      const mid = new THREE.Vector3(t.x + dir.x * 22, t.y + 14, t.z + dir.z * 22);
+      const a = t.yaw + 0.9 - Math.min(age, 4) * 0.35;
+      const r = 170 - Math.min(age, 3) * 25;
+      const shot = new THREE.Vector3(mid.x - Math.sin(a) * r, t.y + 40, mid.z - Math.cos(a) * r);
+      shot.y = Math.max(shot.y, groundAt(shot.x, shot.z, shot.y) + 6);
+      camPos.current.lerp(shot, Math.min(1, dt * (age < 0.3 ? 6 : 4)));
+      camera.position.copy(camPos.current);
+      camera.lookAt(mid);
+    }
     const near = clamp(t.camDist * 0.004, 0.5, 8);
     if (Math.abs(camera.near - near) > 0.05) {
       camera.near = near;

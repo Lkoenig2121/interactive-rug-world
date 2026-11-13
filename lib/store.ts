@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { WorldEvent } from "./explore/events";
+import { FRIENDS, friendById } from "./explore/friends";
 import { loadProgress, saveProgress } from "./explore/progress";
 import { STARS_FOR_SKY, STARS_FOR_SPACE } from "./explore/sky";
 import { SPACE_SPAWN } from "./explore/space";
@@ -103,11 +104,19 @@ interface State {
   arcadeGame: ArcadeGame | null;
   /** Rescue quest: Sid's backyard, then the film landmarks, then home. */
   missionId: MissionId;
+  /** Whether Squeak (the yellow rubber dino companion) is drawn. */
+  showSqueak: boolean;
+  setShowSqueak: (show: boolean) => void;
   /** Exploration: collected star ids, ring-course best, boss beaten, events finished. */
   stars: string[];
   ringBest: number | null;
   bossDefeated: boolean;
   eventsDone: number;
+  /** Toy friends found, and those already delivered to the shelf in Andy's room (the rest follow you). */
+  friends: string[];
+  friendsHome: string[];
+  /** "You found a friend" cutscene in progress (clock time it started). */
+  cutscene: { friendId: string; start: number } | null;
   worldEvent: WorldEvent | null;
   isNight: boolean;
   /** Rocket countdown in progress, and whether the toy is on the space level. */
@@ -183,6 +192,11 @@ interface State {
   finishRings: (seconds: number) => void;
   setWorldEvent: (e: WorldEvent | null) => void;
   completeEvent: (toast: string) => void;
+  /** Recruits a lost toy: it joins your conga line and a short cutscene plays. */
+  findFriend: (id: string) => void;
+  endCutscene: () => void;
+  /** Followers hop onto the shelf once you bring them into Andy's room. */
+  deliverFriends: () => void;
   setNight: (night: boolean) => void;
   /** Starts the rocket countdown at Pizza Planet (once space is unlocked). */
   launchRocket: () => void;
@@ -231,6 +245,8 @@ function persistMission(id: MissionId) {
   }
 }
 
+const SQUEAK_STORAGE_KEY = "carpet-show-squeak";
+
 /** Whether rug buildings, roads and the rug itself respond to hover, clicks and double-clicks. */
 export function rugPickable() {
   const { mode, spawning } = useStore.getState();
@@ -272,7 +288,7 @@ export const useStore = create<State>((set, get) => {
   };
   const persist = () => {
     const s = get();
-    saveProgress({ stars: s.stars, ringBest: s.ringBest, bossDefeated: s.bossDefeated, eventsDone: s.eventsDone });
+    saveProgress({ stars: s.stars, ringBest: s.ringBest, bossDefeated: s.bossDefeated, eventsDone: s.eventsDone, friends: s.friends, friendsHome: s.friendsHome });
   };
 
   return {
@@ -310,10 +326,14 @@ export const useStore = create<State>((set, get) => {
     arrowPicker: null,
     arcadeGame: null,
     missionId: "idle",
+    showSqueak: true,
     stars: [],
     ringBest: null,
     bossDefeated: false,
     eventsDone: 0,
+    friends: [],
+    friendsHome: [],
+    cutscene: null,
     worldEvent: null,
     isNight: false,
     launching: false,
@@ -370,6 +390,20 @@ export const useStore = create<State>((set, get) => {
     hydrateMission: () => {
       const id = loadMission();
       if (id !== get().missionId) set({ missionId: id });
+      try {
+        if (window.localStorage.getItem(SQUEAK_STORAGE_KEY) === "hidden") set({ showSqueak: false });
+      } catch {
+        /* ignore */
+      }
+    },
+    setShowSqueak: (show) => {
+      set({ showSqueak: show });
+      try {
+        window.localStorage.setItem(SQUEAK_STORAGE_KEY, show ? "shown" : "hidden");
+      } catch {
+        /* ignore */
+      }
+      get().showToast(show ? "Squeak is back by your side!" : "Squeak is hiding for now.");
     },
     beginMission: () => {
       if (get().missionId !== "idle" && get().missionId !== "done") return;
@@ -743,7 +777,7 @@ export const useStore = create<State>((set, get) => {
 
     hydrateExplore: () => {
       const p = loadProgress();
-      set({ stars: p.stars, ringBest: p.ringBest, bossDefeated: p.bossDefeated, eventsDone: p.eventsDone });
+      set({ stars: p.stars, ringBest: p.ringBest, bossDefeated: p.bossDefeated, eventsDone: p.eventsDone, friends: p.friends, friendsHome: p.friendsHome });
     },
     collectStar: (id) => {
       const s = get();
@@ -765,9 +799,37 @@ export const useStore = create<State>((set, get) => {
     },
     setWorldEvent: (worldEvent) => set({ worldEvent }),
     completeEvent: (toast) => {
+      const kind = get().worldEvent?.kind;
       set({ worldEvent: null, eventsDone: get().eventsDone + 1 });
       persist();
       get().showToast(toast);
+      const friend = FRIENDS.find((f) => f.event === kind);
+      if (friend) get().findFriend(friend.id);
+    },
+    findFriend: (id) => {
+      const s = get();
+      if (s.friends.includes(id) || !friendById[id]) return;
+      set({ friends: [...s.friends, id], cutscene: { friendId: id, start: runtime.town.clock }, interaction: null, townAutopilot: false });
+      runtime.town.triggers.wave = runtime.town.clock;
+      persist();
+    },
+    endCutscene: () => {
+      const c = get().cutscene;
+      if (!c) return;
+      set({ cutscene: null });
+      const following = get().friends.length - get().friendsHome.length;
+      get().showToast(`${friendById[c.friendId]?.name ?? "Your new friend"} is following you${following > 1 ? ` (with ${following - 1} other${following > 2 ? "s" : ""})` : ""}. Bring them home to Andy's room!`);
+    },
+    deliverFriends: () => {
+      const s = get();
+      const arriving = s.friends.filter((f) => !s.friendsHome.includes(f));
+      if (!arriving.length) return;
+      const friendsHome = [...s.friendsHome, ...arriving];
+      set({ friendsHome });
+      persist();
+      const names = arriving.map((f) => friendById[f]?.name ?? f);
+      const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names[0];
+      s.showToast(`${list} hopped onto the shelf in Andy's room! (${friendsHome.length}/${FRIENDS.length} friends home)`);
     },
     setNight: (isNight) => {
       if (get().isNight !== isNight) set({ isNight });

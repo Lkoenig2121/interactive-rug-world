@@ -12,6 +12,7 @@ import { NavigationPanel } from "./NavigationPanel";
 import { PlaceBadge, TownDirections, TownNavigation } from "./TownNavigation";
 import { ArcadeCabinet } from "./ArcadeCabinet";
 import { ArrowPicker } from "./ArrowPicker";
+import { Cutscene } from "./Cutscene";
 import { EventChip, ExploreStatus, LaunchCountdown } from "./ExploreHud";
 import { Radar } from "./Radar";
 import { HouseToolbar, RoomToolbar, ToyToolbar, WorldDock } from "./Toolbars";
@@ -41,6 +42,11 @@ function useKeyboard() {
       if (s.arcadeGame) {
         if (GAME_KEYS.has(e.code) || e.code === "KeyE") e.preventDefault();
         if (e.code === "Escape" && !e.repeat) s.closeArcade();
+        return;
+      }
+      if (s.cutscene) {
+        if (GAME_KEYS.has(e.code) || e.code === "KeyE") e.preventDefault();
+        if (!e.repeat && (e.code === "Space" || e.code === "Enter" || e.code === "Escape")) s.endCutscene();
         return;
       }
       const playing = s.mode === "walk" || s.mode === "drive" || s.mode === "interior" || s.mode === "toy" || s.mode === "room" || s.mode === "house" || s.mode === "overhead";
@@ -214,6 +220,7 @@ export function AppShell() {
         </div>
       )}
 
+      <Cutscene />
       <LaunchCountdown />
       <FadeOverlay />
       <ArcadeCabinet />

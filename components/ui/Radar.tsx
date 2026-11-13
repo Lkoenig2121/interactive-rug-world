@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { FRIENDS } from "@/lib/explore/friends";
 import { CAR_HALF, carLocal } from "@/lib/explore/living";
 import { STARS } from "@/lib/explore/stars";
 import { runtime } from "@/lib/runtime";
@@ -113,11 +114,11 @@ export function Radar() {
         ctx.restore();
       });
 
-      // Neighbors: people in blue, the kids' bikes in green, the dog in brown.
+      // Neighbors: people in blue, the kids' bikes in purple, the dog in brown.
       const dots: [{ x: number; z: number } | null, string, number][] = [
         [ex.people.mail, "#60a5fa", 3.5],
         [ex.people.walker, "#60a5fa", 3.5],
-        [ex.people.kids, "#4ade80", 3.5],
+        [ex.people.kids, "#c084fc", 3.5],
         [ex.people.dog, "#d4a373", 2.5],
       ];
       for (const [pos, color, r] of dots) {
@@ -158,6 +159,29 @@ export function Radar() {
           ctx.textAlign = "center";
           ctx.fillText(dy > 0 ? "▲" : "▼", x, y - 9);
         }
+      }
+
+      // Lost toy friends still waiting to be found: glowing green dots.
+      const found = new Set(useStore.getState().friends);
+      for (const f of FRIENDS) {
+        if (!f.spot || found.has(f.id) || Math.hypot(f.spot.x - t.x, f.spot.z - t.z) > RANGE) continue;
+        const p = toScreen(f.spot.x, f.spot.z);
+        const x = c + p.sx;
+        const y = c + p.sy;
+        ctx.beginPath();
+        ctx.arc(x, y, 5 + 2 * Math.sin(now * 4), 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(74, 222, 128, 0.25)";
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = "#4ade80";
+        ctx.shadowColor = "#22c55e";
+        ctx.shadowBlur = 8;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = "#f0fdf4";
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
       }
 
       // World event: a pulsing orange dot when it's in range.
@@ -249,10 +273,11 @@ export function Radar() {
     <div className="pointer-events-none flex flex-col items-center gap-1">
       <canvas ref={canvas} style={{ width: SIZE, height: SIZE }} />
       <span className="rounded-full bg-slate-900/60 px-2 py-0.5 text-[10px] font-semibold text-white/80">Radar · 30 m</span>
-      <span className="flex gap-2 rounded-full bg-slate-900/60 px-2 py-0.5 text-[9px] font-semibold text-white/75">
+      <span className="flex max-w-47.5 flex-wrap justify-center gap-x-2 rounded-xl bg-slate-900/60 px-2 py-0.5 text-[9px] font-semibold text-white/75">
         <span className="text-amber-300">★ star</span>
         <span className="text-slate-200">▬ car</span>
         <span className="text-sky-400">● people</span>
+        <span className="text-green-400">● friend</span>
         <span className="text-orange-400">● event</span>
       </span>
     </div>
